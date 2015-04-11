@@ -1,9 +1,8 @@
 # neroptik-mining
-EasyUO Mining script
 
 ## Setup Ultima Online with EasyUO (for Ashworld freeshard players)
 
-* Install Ultime Online from Ashworld website:
+* Install Ultima Online from Ashworld website:
 	* http://www.ashworld-uo.com/download/AshWorld-UO.exe
 * Checkout this repository. You will obtain:
 	* The mining script
@@ -21,4 +20,4 @@ EasyUO Mining script
 	* The value of "ExePath" should be the UO directory. If not then create it.
 * Start the script
 
-Enjoy ! ;)
+Enjoy !
