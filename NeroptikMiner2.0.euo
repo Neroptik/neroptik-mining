@@ -1,6 +1,6 @@
 ;~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ;~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-; NEROPTIK MINER 1.0
+; NEROPTIK MINER 2.0
 ;~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ;~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -11,6 +11,7 @@ GOSUB unmount
 ; MODE
 ;=============================================================================
 SET %smeltonly #FALSE
+SET %piochesonly #FALSE
 
 ;=============================================================================
 ; DECLARATIONS TYPES
@@ -19,11 +20,13 @@ SET %oretypes DWJ_TVJ_GWJ_EWJ
 SET %ingottypes ENK
 SET %piochetypes QPF
 SET %gemtypes UWS_VWS_GXS_AXS_ZWS_TWS
+SET %tinkertooltype KTL
 
 ;=============================================================================
 ; DECLARATIONS CONSTANTES
 ;=============================================================================
 SET %allcome #smc , #spc , All , #spc , come , #spc , $
+SET %createpioches 50
 SET %smallstack 4
 SET %bigstack 20
 SET %smallwait 8
@@ -38,6 +41,11 @@ SET %nbpioches 8
 SET %agapite Agapite
 SET %verite Verite
 SET %valorite Valorite
+SET %cooper Copper
+SET %dullcooper Dull_Copper
+SET %shadow Shadow_Iron
+SET %bronze Bronze
+SET %golden Golden
 
 ;=============================================================================
 ; SELECTION BEETLE
@@ -400,6 +408,86 @@ sub smelt
 return
 
 ;=============================================================================
+; CREATE_PIOCHES
+; Creer de nouvelles pioches en fer
+;=============================================================================
+sub create_pioches
+	WAIT %wait
+	SET #lobjectid %sacpioches
+	EVENT macro 17 1
+	WAIT %wait
+	FINDITEM %tinkertooltype C_ , %sacpioches
+	if #findkind <> -1
+	{
+		EVENT sysMessage [INFO] Recuperation d'un tinker tool kit
+		EXEVENT drag #FINDID 1
+		WAIT %wait
+		EXEVENT dropc #backpackid
+		WAIT %wait
+		SET #lobjectid %sacstockage
+		EVENT macro 17 1
+		WAIT %wait
+		FINDITEM %ingottypes C_ , %sacstockage
+		for #FINDINDEX 1 #FINDCNT
+		{
+			EVENT property #FINDID
+			if %agapite in #property || %verite in #property || %valorite in #property || %cooper in #property || %dullcooper in #property || %shadow in #property || %bronze in #property || %golden in #property
+			{
+				CONTINUE
+			}
+			else
+			{
+				SET %nbp %createpioches * 4
+				EVENT sysMessage [INFO] Recuperation d'un tas de %nbp fers
+				EXEVENT drag #FINDID %nbp
+				WAIT %wait
+				EXEVENT dropc #backpackid
+				WAIT %wait
+				FINDITEM %tinkertooltype C_ , #backpackid
+				if #findkind <> -1
+				{
+					SET #lobjectid #FINDID
+					EVENT macro 17 1
+					GOSUB gump_wait generic_gump 5
+					SET %cx #CONTPOSX + 30
+					SET %cy #CONTPOSY + 110
+					CLICK %cx %cy l
+					WAIT %smallwait
+					SET %cx #CONTPOSX + 385
+					SET %cy #CONTPOSY + 290
+					CLICK %cx %cy l
+					WAIT %smallwait
+					SET %cx #CONTPOSX + 230
+					SET %cy #CONTPOSY + 190
+					CLICK %cx %cy l
+					WAIT %smallwait
+					GOSUB gump_wait generic_gump 5
+					SET %nb 0
+					WHILE %nb < %createpioches
+					{
+						SET %cx #CONTPOSX + 285
+						SET %cy #CONTPOSY + 555
+						CLICK %cx %cy l
+						WAIT %smallwait
+						GOSUB gump_wait generic_gump 5
+						SET %nb %nb + 1
+					}
+					EVENT sysMessage [INFO] Transfert des lingots dans le sac de stockage
+					GOSUB transfert %ingottypes #backpackid %sacstockage
+					EVENT sysMessage [INFO] Transfert des tinker tool kit dans le sac de pioches
+					GOSUB transfert %tinkertooltype #backpackid %sacpioches
+					EVENT sysMessage [INFO] Transfert des pioches dans le sac de pioches
+					GOSUB transfert %piochetypes #backpackid %sacpioches
+					GOSUB get_pioches
+					return
+				}
+			}
+			WAIT %smallwait
+		}
+	}
+return
+
+;=============================================================================
 ; GET_PIOCHES
 ; Prends des pioches dans le sac de stockage
 ;=============================================================================
@@ -418,6 +506,10 @@ sub get_pioches
 			EXEVENT dropc #backpackid
 			WAIT %wait
 		}
+		else
+		{
+			GOSUB create_pioches
+		}
 		SET %nb %nb + 1
 		WAIT %wait
     }
@@ -430,6 +522,12 @@ return
 if %smeltonly = #TRUE
 {
 	GOSUB smelt
+	halt
+}
+
+if %piochesonly = #TRUE
+{
+	GOSUB create_pioches
 	halt
 }
 
