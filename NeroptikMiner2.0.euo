@@ -1,0 +1,520 @@
+;~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+;~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; NEROPTIK MINER 1.0
+;~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+;~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+TILE init noOverrides
+GOSUB unmount
+
+;=============================================================================
+; MODE
+;=============================================================================
+SET %smeltonly #FALSE
+
+;=============================================================================
+; DECLARATIONS TYPES
+;=============================================================================
+SET %oretypes DWJ_TVJ_GWJ_EWJ
+SET %ingottypes ENK
+SET %piochetypes QPF
+SET %gemtypes UWS_VWS_GXS_AXS_ZWS_TWS
+
+;=============================================================================
+; DECLARATIONS CONSTANTES
+;=============================================================================
+SET %allcome #smc , #spc , All , #spc , come , #spc , $
+SET %smallstack 4
+SET %bigstack 20
+SET %smallwait 8
+SET %wait 12
+SET %bigwait 28
+SET %recallretries 3
+SET %smeltretries 4
+SET %emptyspotretries 5
+SET %transfertretries 10
+SET %maxweight 1400
+SET %nbpioches 8
+SET %agapite Agapite
+SET %verite Verite
+SET %valorite Valorite
+
+;=============================================================================
+; SELECTION BEETLE
+;=============================================================================
+SET #LTARGETID N/A
+DISPLAY OK Selectionner la beetle $
+SET #TARGCURS 1
+WHILE #TARGCURS = 1
+	WAIT 1
+		SET %pet #LTARGETID
+
+;=============================================================================
+; SELECTION FORGE
+;=============================================================================
+SET #LTARGETID N/A
+DISPLAY OK Selectionner la forge $
+SET #TARGCURS 1
+WHILE #TARGCURS = 1
+	WAIT 1
+		SET %forge #LTARGETID
+
+;=============================================================================
+; SELECTION SAC DE STOCKAGE
+;=============================================================================
+SET #LTARGETID N/A
+DISPLAY OK Selectionner le sac de stockage $
+SET #TARGCURS 1
+WHILE #TARGCURS = 1
+	WAIT 1
+		SET %sacstockage #LTARGETID
+		
+;=============================================================================
+; SELECTION SAC DE PIOCHES
+;=============================================================================
+SET #LTARGETID N/A
+DISPLAY OK Selectionner le sac de pioches $
+SET #TARGCURS 1
+WHILE #TARGCURS = 1
+	WAIT 1
+		SET %sacpioches #LTARGETID
+		
+;=============================================================================
+; SELECTION SAC DE MINERAI
+;=============================================================================
+SET #LTARGETID N/A
+DISPLAY OK Selectionner le sac de minerai $
+SET #TARGCURS 1
+WHILE #TARGCURS = 1
+	WAIT 1
+		SET %sacminerai #LTARGETID
+	
+;=============================================================================
+; SELECTION RUNEBOOK
+;=============================================================================
+SET #LTARGETID N/A
+DISPLAY OK Selectionner le runebook $
+SET #TARGCURS 1
+WHILE #TARGCURS = 1
+	WAIT 1
+		SET %runebook #LTARGETID
+
+;=============================================================================
+; SELECTION BACKPACK BEETLE
+;=============================================================================		
+DISPLAY OK Ouvrir le sac de la beetle (6s) $
+WAIT 6s
+SET %sacbeetle #CONTID
+
+;=============================================================================
+; CLICK_RELATIVE
+; Clic sur un tile de type sol a une position relative au personnage
+; param 1 : décalage X
+; param 2 : décalage Y
+;=============================================================================
+sub click_relative
+	TILE cnt #charPosX #charPosY #cursKind
+	TILE Get #charPosX #charPosY #tileCnt #cursKind
+	WAIT %smallwait
+	SET #ltargettile #tileType
+	SET #ltargetx #charposx + %1
+	SET #ltargety #charposy + %2
+	SET #ltargetz #charposz
+	SET #ltargetkind 3
+	WAIT %smallwait
+	EVENT macro 22
+return
+
+;=============================================================================
+; CHECK_BEETLE_FULL
+; Vérifie si la beetle est pleine
+; return : Vrai si pleine Faux sinon
+;=============================================================================
+sub check_beetle_full
+	EVENT property %pet
+	STR pos #property , , ,
+	SET %start #strres + 26
+	STR pos #property sto
+	SET %end #strres - %start - 1
+	STR mid #property %start %end
+	SET %weight #strres
+	if %weight > %maxweight
+		SET %res #TRUE
+    else
+		SET %res #FALSE
+return %res
+
+;=============================================================================
+; MOUNT
+; Monte sur la beetle
+;=============================================================================
+sub mount
+	MSG %allcome
+	WAIT 2s
+	SET #lobjectid %pet
+	EVENT macro 17 0
+	WAIT 1s
+return
+
+;=============================================================================
+; UNMOUNT
+; Descend de la beetle
+;=============================================================================
+sub unmount
+	SET #lobjectid #CHARID
+	EVENT macro 17 0
+	WAIT 1s
+return
+
+;=============================================================================
+; GUMP_WAIT
+; Attend l'apparition d'un gump
+; param 1 : Gump
+; param 2 : Timeout
+; param 3 : Mode
+;=============================================================================
+sub gump_wait
+	if %0 > 0
+		SET %gump %1
+	if %0 > 2
+		SET %mode %3
+	SET %gtimeout #scnt + %gumptimeout
+	SET #result SUCCESS
+	if %0 > 1
+		SET %gtimeout #scnt + %2
+	for %gump_wait #false #true
+	{
+		SET %1 #true
+		if #contname <> %gump
+		{
+			SET %gump_wait #false
+		}
+		WAIT %smallwait
+		if #scnt > %gtimeout
+		{
+			if %mode = RTRY
+			{
+				SET #result FAIL
+				SET %gump_wait #true
+			}
+			if %mode = FAIL
+			{
+				DISPLAY OK There was a problem waiting for gump: %gump ! It did not show up timely. $$Please check whats wrong and restart the script !
+			}
+		}
+	}
+return
+
+;=============================================================================
+; RECALL
+; Téléporte aux différents spots
+; param 1 : Numéro de la rune
+;=============================================================================
+sub recall
+	SET %where %1
+	SET %success #false
+	for %attempt 1 %recallretries
+	{
+		SET %oldposx #charposx
+		SET %oldposy #charposy
+		if ! %success
+		{
+			SET #lobjectid %runebook
+			EVENT macro 17 0
+			GOSUB gump_wait generic_gump 5
+			CONTPOS 0 0
+			goto case_ , %where
+case_1:
+case_2:
+			CLICK 140 200
+goto endcase
+case_3:
+case_4:
+			CLICK 175 200
+goto endcase
+case_5:
+case_6:
+			CLICK 210 200
+goto endcase
+case_7:
+case_8:
+			CLICK 245 200
+goto endcase
+case_9:
+case_10:
+			CLICK 310 200
+goto endcase
+case_11:
+case_12:
+			CLICK 345 200
+goto endcase
+case_13:
+case_14:
+			CLICK 380 200
+goto endcase
+case_15:
+case_16:
+			CLICK 415 200
+endcase:
+			WAIT %wait
+			SET %cl %where + 1
+			SET %cl %cl % 2
+			SET %CLICKx ( 140 + ( %cl * 160 )  )
+			SET %CLICKy 145
+			CLICK %CLICKx %CLICKy
+			WAIT %bigwait
+			WAIT %bigwait
+			WAIT %bigwait
+		}
+		if ! ( %oldposx = #charposx && %oldposy = #charposy )
+		{
+			SET %success #true
+			SET %recallwait #true
+		}
+	}
+return
+
+;=============================================================================
+; TRANSFERT
+; Transfert items d'un sac à un autre
+; param 1 : Type des objets à transférer
+; param 2 : Sac de départ
+; param 3 : Sac d'arrivée
+; param 4 : Stack size
+;=============================================================================
+sub transfert
+	SET %typeobj %1
+	SET %from %2
+	SET %to %3
+	SET #lobjectid %from
+	EVENT macro 17 1
+	WAIT %wait
+	if %0 = 4
+		%size = %4
+	else
+		%size = 0
+	SET %nb 0
+	WHILE %nb < %transfertretries
+	{
+		FINDITEM %typeobj C_ , %from
+		for #FINDINDEX 1 #FINDCNT
+		{
+			if #findkind <> -1
+			{
+				if %size > 0
+					EXEVENT drag #findid %size
+				else
+					EXEVENT drag #findid #findstack
+				WAIT %wait
+				EXEVENT dropc %to
+				WAIT %wait
+				GOSUB check_beetle_full
+				if #result = #TRUE
+					break
+			}
+			else
+				break
+			WAIT %smallwait
+		}
+		SET %nb %nb + 1
+	}
+return
+
+;=============================================================================
+; SMELT_ALL
+; param 1 : Stack id
+; Fond le minerai directment dans le sac source
+; puis transfert les lingots dans le sac de stockage
+;=============================================================================
+sub smelt_all
+	WAIT %smallwait
+	SET %stackid %1
+	EVENT sysMessage [INFO] Fond le minerai
+	SET #lobjectid %stackid
+	EVENT macro 17 0
+	TARGET
+	SET #ltargetid %forge
+	SET #ltargetkind 1
+	EVENT macro 22 0
+return
+
+;=============================================================================
+; SMELT_STACK
+; param 1 : Stack id
+; Fond le minerai en déplacant des petits tas dans le backpack
+; puis transfert les lingots dans le sac de stockage
+;=============================================================================
+sub smelt_stack
+	SET %stackid %1
+	SET %sz %2
+	EVENT sysMessage [INFO] Transfert %sz minerais dans le backpack
+	EXEVENT drag %stackid %sz
+	WAIT %wait
+	EXEVENT dropc #backpackid
+	WAIT %wait
+	SET #CONTID #backpackid
+	FINDITEM %oretypes C_ , #backpackid
+	for #FINDINDEX 1 #FINDCNT
+		if #findkind <> -1
+			GOSUB smelt_all #findid
+return
+
+;=============================================================================
+; SMELT
+; Fond le minerai en déplacant des petits tas dans le backpack
+; puis le transfert dans le sac de stockage
+;=============================================================================
+sub smelt
+	GOSUB unmount
+	WAIT %wait
+	EVENT sysMessage [INFO] Transfert du minerai dans le sac de minerai
+	GOSUB transfert %oretypes #backpackid %sacminerai
+	EVENT sysMessage [INFO] Transfert du minerai dans le sac de minerai
+	GOSUB transfert %oretypes %sacbeetle %sacminerai
+	EVENT sysMessage [INFO] Transfert des lingots dans le sac de stockage
+	GOSUB transfert %ingottypes #backpackid %sacstockage
+	EVENT sysMessage [INFO] Transfert des gems dans le sac de stockage
+	GOSUB transfert %gemtypes #backpackid %sacstockage
+	WAIT %wait
+	SET #lobjectid %sacminerai
+	EVENT macro 17 1
+	WAIT %wait
+	SET %nb 0
+	WHILE %nb < %smeltretries
+	{
+		FINDITEM %oretypes C_ , %sacminerai
+		for #FINDINDEX 1 #FINDCNT
+		{
+			GOSUB smelt_all #findid
+			WAIT %wait
+		}
+		SET %nb %nb + 1
+	}
+	EVENT sysMessage [INFO] Transfert du minerai dans le sac de minerai
+	GOSUB transfert %oretypes #backpackid %sacminerai
+	EVENT sysMessage [INFO] Transfert des lingots dans le sac de stockage
+	GOSUB transfert %ingottypes #backpackid %sacstockage
+	EVENT sysMessage [INFO] Transfert des gems dans le sac de stockage
+	GOSUB transfert %gemtypes #backpackid %sacstockage
+	WAIT %smallwait
+return
+
+;=============================================================================
+; GET_PIOCHES
+; Prends des pioches dans le sac de stockage
+;=============================================================================
+sub get_pioches
+	WAIT %wait
+	SET #lobjectid %sacpioches
+	EVENT macro 17 1
+	WAIT %smallwait
+	SET %nb 0
+	WHILE %nb < %nbpioches
+	{
+		FINDITEM %piochetypes C_ , %sacpioches
+		if #findkind <> -1
+		{
+			EXEVENT drag #findid 1
+			EXEVENT dropc #backpackid
+			WAIT %wait
+		}
+		SET %nb %nb + 1
+		WAIT %wait
+    }
+return
+
+;=============================================================================
+; PROGRAMME PRINCIPAL
+;=============================================================================
+
+if %smeltonly = #TRUE
+{
+	GOSUB smelt
+	halt
+}
+
+WHILE #TRUE
+{
+	SET %spot 2
+start:
+	WHILE %spot < 17
+	{
+		SET %prev_weight #weight
+		SET %nb_failed 0
+		EVENT sysMessage [INFO] Remonte sur la beetle
+		GOSUB mount
+		SET %snb %spot - 1
+		EVENT sysMessage [INFO] Va au spot %snb
+		GOSUB recall %spot
+		WAIT %smallwait
+		EVENT sysMessage [INFO] Descend de la beetle
+		GOSUB unmount
+		WAIT %wait
+		WHILE #TRUE
+		{
+			EVENT sysMessage [INFO] Cherche pioche dans le backpack
+			FINDITEM %piochetypes C_ , #backpackid
+			if #findkind <> -1
+			{
+				EVENT sysMessage [INFO] Pioche trouvee
+				if #weight = %prev_weight
+					SET %nb_failed %nb_failed + 1
+				else
+					SET %nb_failed 0
+				if %nb_failed > %emptyspotretries
+				{
+				   EVENT sysMessage [INFO] Spot %spot vide
+				   SET %nb_failed 0
+				   goto next
+				}
+				SET %prev_weight #weight
+				WAIT %smallwait
+				SET #lobjectid #findid
+				EVENT macro 17 0
+				EVENT sysMessage [INFO] Commence a miner
+				GOSUB click_relative 0 0
+				WAIT %smallwait
+				if #maxweight < #weight
+				{
+					EVENT sysMessage [INFO] Backpack plein, transfert dans la beetle
+					GOSUB transfert %oretypes #backpackid %sacbeetle %stacksize
+					GOSUB check_beetle_full
+					if #result = #TRUE
+					{
+						EVENT sysMessage [INFO] Beetle pleine
+						GOSUB mount
+						EVENT sysMessage [INFO] Retour a la maison
+						GOSUB recall 1
+						GOSUB smelt
+						goto start
+					}
+				}
+			}
+			else
+			{
+				EVENT sysMessage [INFO] Backpack plein, transfert dans la beetle
+				GOSUB transfert %oretypes #backpackid %sacbeetle %stacksize
+				EVENT sysMessage [INFO] Plus de pioches
+				GOSUB mount
+				EVENT sysMessage [INFO] Retour a la maison
+				GOSUB recall 1
+				GOSUB get_pioches
+				goto start
+			}
+		}
+next:
+		EVENT sysMessage [INFO] Transfert du minerai dans la beetle
+		GOSUB transfert %oretypes #backpackid %sacbeetle %stacksize
+		GOSUB check_beetle_full
+		if #result = #TRUE
+		{
+			EVENT sysMessage [INFO] Beetle pleine
+			GOSUB mount
+			EVENT sysMessage [INFO] Retour a la maison
+			GOSUB recall 1
+			GOSUB smelt
+			goto start
+		}
+		SET %spot %spot + 1
+	}
+}

@@ -1,0 +1,10 @@
+X Stacksize valorie verite
+- Vies restantes (envoie MP -> pause)
+X Refonte des minerai secours
+X Transfert des gems
+- Mise en place d'un menu
+- Fabrication pioches (Plus du tout de pioches / outils tinker -> envoie MP -> pause)
+- Gestion liste de runebook
+- Ramassage minerai a proximité
+X Bug quand 2 spot vides d'affilé
+X Bug quand Beetle pleine (torune en boucle sur un gros tas)
