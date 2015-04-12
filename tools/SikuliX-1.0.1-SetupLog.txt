@@ -1,0 +1,86 @@
+[debug (4/12/15 1:37:22 PM)] RunSetup: SikuliX Setup Build: 1.0.1 12NOV2013120000
+[debug (4/12/15 1:37:22 PM)] RunSetup: ... starting with no args given
+[debug (4/12/15 1:37:22 PM)] RunSetup: syspath: C:\Users\neroptik\Desktop\neroptik-mining\tools\libs
+[debug (4/12/15 1:37:22 PM)] RunSetup: syspath: C:\Program Files\Common Files\Microsoft Shared\Windows Live
+[debug (4/12/15 1:37:22 PM)] RunSetup: syspath: C:\Python27\
+[debug (4/12/15 1:37:22 PM)] RunSetup: syspath: C:\Python27\Scripts
+[debug (4/12/15 1:37:22 PM)] RunSetup: syspath: C:\Python34\
+[debug (4/12/15 1:37:22 PM)] RunSetup: syspath: C:\Python34\Scripts
+[debug (4/12/15 1:37:22 PM)] RunSetup: syspath: C:\ProgramData\Oracle\Java\javapath
+[debug (4/12/15 1:37:22 PM)] RunSetup: syspath: C:\Windows\system32
+[debug (4/12/15 1:37:22 PM)] RunSetup: syspath: C:\Windows
+[debug (4/12/15 1:37:22 PM)] RunSetup: syspath: C:\Windows\System32\Wbem
+[debug (4/12/15 1:37:22 PM)] RunSetup: syspath: C:\Windows\System32\WindowsPowerShell\v1.0\
+[debug (4/12/15 1:37:22 PM)] RunSetup: syspath: C:\Program Files\Windows Live\Shared
+[debug (4/12/15 1:37:22 PM)] RunSetup: syspath: C:\Program Files\TortoiseGit\bin
+[debug (4/12/15 1:37:22 PM)] RunSetup: user home: C:\Users\neroptik
+[debug (4/12/15 1:37:24 PM)] RunSetup: RunningSystem: Windows 6.1
+[debug (4/12/15 1:37:24 PM)] RunSetup: parent of jar/classes: C:/Users/neroptik/Desktop/neroptik-mining/tools/
+[debug (4/12/15 1:37:24 PM)] RunSetup: RunningJava: Java 8 (x86) 1.8.0_31-b13
+[debug (4/12/15 1:37:24 PM)] RunSetup: ... could not detect whether Sikuli is used the first time on this system
+[debug (4/12/15 1:38:03 PM)] FileManager: Downloading 1.0.1-1.jar having 12942 KB
+[debug (4/12/15 1:38:28 PM)] FileManager: downloaded 12942 KB to C:\Users\neroptik\Desktop\neroptik-mining\tools\1.0.1-1.jar
+[debug (4/12/15 1:38:28 PM)] FileManager: download time: 24
+[debug (4/12/15 1:38:31 PM)] RunSetup: Download ended
+[debug (4/12/15 1:38:31 PM)] RunSetup: adding native stuff to sikuli-ide.jar
+[debug (4/12/15 1:38:31 PM)] FileManager: buildJar: C:\Users\neroptik\Desktop\neroptik-mining\tools\sikuli-temp.jar
+[debug (4/12/15 1:38:31 PM)] FileManager: buildJar: adding: C:\Users\neroptik\Desktop\neroptik-mining\tools\sikuli-ide.jar
+[debug (4/12/15 1:38:38 PM)] FileManager: buildJar: adding: C:\Users\neroptik\Desktop\neroptik-mining\tools\sikuli-setup.jar
+[debug (4/12/15 1:38:43 PM)] FileManager: buildJar: completed
+[debug (4/12/15 1:38:43 PM)] ResourceLoaderBasic: export: Trying to access package
+[debug (4/12/15 1:38:43 PM)] ResourceLoaderBasic: export: Accessing jar: file:/C:/Users/neroptik/Desktop/neroptik-mining/tools/sikuli-setup.jar
+[debug (4/12/15 1:38:44 PM)] ResourceLoaderBasic: export: Found 1 Files in Commands/windows/runIDE.cmd
+[debug (4/12/15 1:38:44 PM)] RunSetup: trying to set up the environment
+[debug (4/12/15 1:38:44 PM)] ResourceLoaderBasic: check: we are running on arch: x86
+[debug (4/12/15 1:38:44 PM)] ResourceLoaderBasic: check: using Java at: C:/Program Files/Java/jre1.8.0_31/
+[error (4/12/15 1:38:44 PM)] ResourceLoaderBasic: check: No valid libs path available until now!
+[action (4/12/15 1:38:44 PM)] ResourceLoaderBasic: check: Please wait! Trying to extract libs to jar parent folder: C:/Users/neroptik/Desktop/neroptik-mining/tools/
+[debug (4/12/15 1:38:44 PM)] ResourceLoaderBasic: extractLibs: Accessing jar: file:/C:/Users/neroptik/Desktop/neroptik-mining/tools/sikuli-setup.jar
+[debug (4/12/15 1:38:45 PM)] ResourceLoaderBasic: extractLibs: Found 14 Files in META-INF/libs/windows/libs32/
+[debug (4/12/15 1:38:45 PM)] ResourceLoaderBasic: export: Trying to access package
+[debug (4/12/15 1:38:45 PM)] ResourceLoaderBasic: export: Accessing jar: file:/C:/Users/neroptik/Desktop/neroptik-mining/tools/sikuli-setup.jar
+[debug (4/12/15 1:38:46 PM)] ResourceLoaderBasic: export: Found 0 Files in META-INF/libs/tessdata
+[debug (4/12/15 1:38:46 PM)] ResourceLoaderBasic: checkLibsDir: C:\Users\neroptik\Desktop\neroptik-mining\tools\libs
+[debug (4/12/15 1:38:46 PM)] ResourceLoaderBasic: loadLib: WinUtil
+[debug (4/12/15 1:38:46 PM)] ResourceLoaderBasic: loadLib: Found: WinUtil
+[debug (4/12/15 1:38:46 PM)] ResourceLoaderBasic: loadLib: Now loaded: WinUtil
+[debug (4/12/15 1:38:46 PM)] ResourceLoaderBasic: checkLibsDir: Using libs at: C:\Users\neroptik\Desktop\neroptik-mining\tools\libs
+[debug (4/12/15 1:38:46 PM)] ResourceLoaderBasic: export: Using this as OCR directory (tessdata) too
+[debug (4/12/15 1:38:50 PM)] RunSetup: Trying to run functional test: running Jython statements via SikuliScript
+[debug (4/12/15 1:38:50 PM)] SikuliX: before adding to classpath: C:\Users\neroptik\Desktop\neroptik-mining\tools\sikuli-ide.jar
+[debug (4/12/15 1:38:50 PM)] SikuliX: 0: file:/C:/Users/neroptik/Desktop/neroptik-mining/tools/sikuli-setup.jar
+[debug (4/12/15 1:38:50 PM)] SikuliX: after adding to classpath
+[debug (4/12/15 1:38:50 PM)] SikuliX: 0: file:/C:/Users/neroptik/Desktop/neroptik-mining/tools/sikuli-setup.jar
+[debug (4/12/15 1:38:50 PM)] SikuliX: 1: file:/C:/Users/neroptik/Desktop/neroptik-mining/tools/sikuli-ide.jar
+[debug (4/12/15 1:38:50 PM)] RunSetup: trying to run testSetup.sikuli using SikuliScript
+[debug (4/12/15 1:38:53 PM)] SikuliX Jython Support Build: 1.0.1 12SEP2013160248
+[debug (4/12/15 1:38:54 PM)] JythonScriptRunner: : executeScriptHeader: adding SikuliX Lib path to sys.path
+C:\Users\neroptik\Desktop\neroptik-mining\tools\sikuli-setup.jar\Lib
+[debug (4/12/15 1:38:55 PM)] Jython: sikuli: __init__: entering
+[debug (4/12/15 1:38:55 PM)] Jython: sikuli: Sikuli: entering
+[debug (4/12/15 1:38:56 PM)] Jython: sikuli: Sikuli: constants
+[debug (4/12/15 1:38:56 PM)] Jython: sikuli: Sikuli: import Region
+[debug (4/12/15 1:38:57 PM)] Jython: sikuli: Sikuli: import Screen
+[debug (4/12/15 1:38:57 PM)] Jython: sikuli: Sikuli: Env.addHotkey
+[debug (4/12/15 1:38:57 PM)] Jython: sikuli: Sikuli: import Match
+[debug (4/12/15 1:38:57 PM)] Jython: sikuli: Sikuli: import Pattern
+[debug (4/12/15 1:38:57 PM)] Jython: sikuli: Sikuli: import Location
+[debug (4/12/15 1:38:57 PM)] Jython: sikuli: Sikuli: import ScreenUnion
+[debug (4/12/15 1:38:57 PM)] Jython: sikuli: Sikuli: import Finder
+[debug (4/12/15 1:38:57 PM)] ResourceLoaderBasic: loadLib: VisionProxy
+[debug (4/12/15 1:38:57 PM)] ResourceLoaderBasic: loadLib: Found: VisionProxy
+[debug (4/12/15 1:38:57 PM)] ResourceLoaderBasic: loadLib: Now loaded: VisionProxy
+[debug (4/12/15 1:38:57 PM)] Jython: sikuli: Sikuli: import App
+[debug (4/12/15 1:38:57 PM)] ResourceLoaderBasic: loadLib: Is already loaded: WinUtil
+[debug (4/12/15 1:38:57 PM)] Screen: initScreens: basic initialization (1 Screen(s) found)
+[debug (4/12/15 1:38:57 PM)] *** monitor configuration (primary: 0) ***
+[debug (4/12/15 1:38:57 PM)] Screen 0: S(0)[0,0 1600x900]
+[debug (4/12/15 1:38:57 PM)] *** end monitor configuration ***
+[debug (4/12/15 1:38:57 PM)] Jython: sikuli: Sikuli: import Key
+[debug (4/12/15 1:38:57 PM)] Jython: sikuli: Sikuli: import from Basics
+[debug (4/12/15 1:38:57 PM)] Jython: sikuli: Sikuli: import from compare
+[debug (4/12/15 1:38:57 PM)] Jython: sikuli: Sikuli: init SikuliImporter
+[debug (4/12/15 1:38:57 PM)] Jython: sikuli: Sikuli: import SikuliScript
+[debug (4/12/15 1:38:57 PM)] Jython: init SCREEN as ()
+[debug (4/12/15 1:38:57 PM)] Sikuli-Script startup: 3832
+[debug (4/12/15 1:39:04 PM)] RunSetup: ... SikuliX Setup seems to have ended successfully ;-)

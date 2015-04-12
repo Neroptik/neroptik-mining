@@ -1,0 +1,54 @@
+; Lil' Login Script by Chumber
+set %char 3
+set %login GRI
+set %server AAG
+set %chars GXJC
+
+start:
+if #contkind = %login
+{
+	click 333 403
+	wait 20
+	for %i 0 15
+	{
+			key delete
+	}
+	msg xxx$
+	wait 50
+}
+ 
+if #contkind = %server
+{
+   wait 20
+   click 620 440 l
+   wait 20
+}
+ 
+if #contkind = %chars
+{
+    wait 20
+	if %char = 1
+	{
+			click 370 165 d
+	}      
+	if %char = 2
+	{
+			click 370 205 d
+	}
+	if %char = 3
+	{
+			click 370 245 d
+	}
+	if %char = 4
+	{
+			click 370 285 d
+	}
+	if %char = 5
+	{
+			click 370 225 d
+	}
+	click 620 440 l
+	wait 20
+}
+ 
+goto start

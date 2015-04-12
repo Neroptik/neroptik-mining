@@ -12,6 +12,7 @@ GOSUB unmount
 ;=============================================================================
 SET %smeltonly #FALSE
 SET %piochesonly #FALSE
+SET %interactive #FALSE
 
 ;=============================================================================
 ; DECLARATIONS TYPES
@@ -47,72 +48,85 @@ SET %shadow Shadow_Iron
 SET %bronze Bronze
 SET %golden Golden
 
-;=============================================================================
-; SELECTION BEETLE
-;=============================================================================
-SET #LTARGETID N/A
-DISPLAY OK Selectionner la beetle $
-SET #TARGCURS 1
-WHILE #TARGCURS = 1
-	WAIT 1
-		SET %pet #LTARGETID
+if %interactive = #TRUE
+{
+	DISPLAY yesno Voulez vous redefinir les elements ?
+	if #dispRes = yes
+	{
+		;=============================================================================
+		; SELECTION BEETLE
+		;=============================================================================
+		SET #LTARGETID N/A
+		DISPLAY OK Selectionner la beetle $
+		SET #TARGCURS 1
+		WHILE #TARGCURS = 1
+			WAIT 1
+			SET *pet #LTARGETID
 
-;=============================================================================
-; SELECTION FORGE
-;=============================================================================
-SET #LTARGETID N/A
-DISPLAY OK Selectionner la forge $
-SET #TARGCURS 1
-WHILE #TARGCURS = 1
-	WAIT 1
-		SET %forge #LTARGETID
+		;=============================================================================
+		; SELECTION FORGE
+		;=============================================================================
+		SET #LTARGETID N/A
+		DISPLAY OK Selectionner la forge $
+		SET #TARGCURS 1
+		WHILE #TARGCURS = 1
+			WAIT 1
+				SET *forge #LTARGETID
 
-;=============================================================================
-; SELECTION SAC DE STOCKAGE
-;=============================================================================
-SET #LTARGETID N/A
-DISPLAY OK Selectionner le sac de stockage $
-SET #TARGCURS 1
-WHILE #TARGCURS = 1
-	WAIT 1
-		SET %sacstockage #LTARGETID
-		
-;=============================================================================
-; SELECTION SAC DE PIOCHES
-;=============================================================================
-SET #LTARGETID N/A
-DISPLAY OK Selectionner le sac de pioches $
-SET #TARGCURS 1
-WHILE #TARGCURS = 1
-	WAIT 1
-		SET %sacpioches #LTARGETID
-		
-;=============================================================================
-; SELECTION SAC DE MINERAI
-;=============================================================================
-SET #LTARGETID N/A
-DISPLAY OK Selectionner le sac de minerai $
-SET #TARGCURS 1
-WHILE #TARGCURS = 1
-	WAIT 1
-		SET %sacminerai #LTARGETID
-	
-;=============================================================================
-; SELECTION RUNEBOOK
-;=============================================================================
-SET #LTARGETID N/A
-DISPLAY OK Selectionner le runebook $
-SET #TARGCURS 1
-WHILE #TARGCURS = 1
-	WAIT 1
-		SET %runebook #LTARGETID
+		;=============================================================================
+		; SELECTION SAC DE STOCKAGE
+		;=============================================================================
+		SET #LTARGETID N/A
+		DISPLAY OK Selectionner le sac de stockage $
+		SET #TARGCURS 1
+		WHILE #TARGCURS = 1
+			WAIT 1
+			SET *sacstockage #LTARGETID
+				
+		;=============================================================================
+		; SELECTION SAC DE PIOCHES
+		;=============================================================================
+		SET #LTARGETID N/A
+		DISPLAY OK Selectionner le sac de pioches $
+		SET #TARGCURS 1
+		WHILE #TARGCURS = 1
+			WAIT 1
+			SET *sacpioches #LTARGETID
+				
+		;=============================================================================
+		; SELECTION SAC DE MINERAI
+		;=============================================================================
+		SET #LTARGETID N/A
+		DISPLAY OK Selectionner le sac de minerai $
+		SET #TARGCURS 1
+		WHILE #TARGCURS = 1
+			WAIT 1
+			SET *sacminerai #LTARGETID
+			
+		;=============================================================================
+		; SELECTION RUNEBOOK
+		;=============================================================================
+		SET #LTARGETID N/A
+		DISPLAY OK Selectionner le runebook $
+		SET #TARGCURS 1
+		WHILE #TARGCURS = 1
+			WAIT 1
+			SET *runebook #LTARGETID
 
-;=============================================================================
-; SELECTION BACKPACK BEETLE
-;=============================================================================		
-DISPLAY OK Ouvrir le sac de la beetle (6s) $
-WAIT 6s
-SET %sacbeetle #CONTID
+		;=============================================================================
+		; SELECTION BACKPACK BEETLE
+		;=============================================================================		
+		DISPLAY OK Ouvrir le sac de la beetle (6s) $
+		WAIT 6s
+		SET *sacbeetle #CONTID
+	}
+}
+
+if *pet = N/A || *forge = N/A || *sacstockage = N/A || *sacpioches = N/A || *sacminerai = N/A || *runebook = N/A || *sacbeetle = N/A
+{
+	DISPLAY Les elements n'ont pas ete definis. $ Vous devez demarrer le script en mode interactif.
+	halt
+}
 
 ;=============================================================================
 ; CLICK_RELATIVE
@@ -139,7 +153,7 @@ return
 ; return : Vrai si pleine Faux sinon
 ;=============================================================================
 sub check_beetle_full
-	EVENT property %pet
+	EVENT property *pet
 	STR pos #property , , ,
 	SET %start #strres + 26
 	STR pos #property sto
@@ -159,7 +173,7 @@ return %res
 sub mount
 	MSG %allcome
 	WAIT 2s
-	SET #lobjectid %pet
+	SET #lobjectid *pet
 	EVENT macro 17 0
 	WAIT 1s
 return
@@ -227,7 +241,7 @@ sub recall
 		SET %oldposy #charposy
 		if ! %success
 		{
-			SET #lobjectid %runebook
+			SET #lobjectid *runebook
 			EVENT macro 17 0
 			GOSUB gump_wait generic_gump 5
 			CONTPOS 0 0
@@ -313,7 +327,7 @@ sub transfert
 					EXEVENT drag #findid %size
 				else
 					EXEVENT drag #findid #findstack
-				WAIT %wait
+				WAIT %smallwait
 				EXEVENT dropc %to
 				WAIT %wait
 				GOSUB check_beetle_full
@@ -322,8 +336,9 @@ sub transfert
 			}
 			else
 				break
-			WAIT %smallwait
+			WAIT %wait
 		}
+		WAIT %smallwait
 		SET %nb %nb + 1
 	}
 return
@@ -341,7 +356,7 @@ sub smelt_all
 	SET #lobjectid %stackid
 	EVENT macro 17 0
 	TARGET
-	SET #ltargetid %forge
+	SET #ltargetid *forge
 	SET #ltargetkind 1
 	EVENT macro 22 0
 return
@@ -376,21 +391,21 @@ sub smelt
 	GOSUB unmount
 	WAIT %wait
 	EVENT sysMessage [INFO] Transfert du minerai dans le sac de minerai
-	GOSUB transfert %oretypes #backpackid %sacminerai
+	GOSUB transfert %oretypes #backpackid *sacminerai
 	EVENT sysMessage [INFO] Transfert du minerai dans le sac de minerai
-	GOSUB transfert %oretypes %sacbeetle %sacminerai
+	GOSUB transfert %oretypes *sacbeetle *sacminerai
 	EVENT sysMessage [INFO] Transfert des lingots dans le sac de stockage
-	GOSUB transfert %ingottypes #backpackid %sacstockage
+	GOSUB transfert %ingottypes #backpackid *sacstockage
 	EVENT sysMessage [INFO] Transfert des gems dans le sac de stockage
-	GOSUB transfert %gemtypes #backpackid %sacstockage
+	GOSUB transfert %gemtypes #backpackid *sacstockage
 	WAIT %wait
-	SET #lobjectid %sacminerai
+	SET #lobjectid *sacminerai
 	EVENT macro 17 1
 	WAIT %wait
 	SET %nb 0
 	WHILE %nb < %smeltretries
 	{
-		FINDITEM %oretypes C_ , %sacminerai
+		FINDITEM %oretypes C_ , *sacminerai
 		for #FINDINDEX 1 #FINDCNT
 		{
 			GOSUB smelt_all #findid
@@ -399,11 +414,11 @@ sub smelt
 		SET %nb %nb + 1
 	}
 	EVENT sysMessage [INFO] Transfert du minerai dans le sac de minerai
-	GOSUB transfert %oretypes #backpackid %sacminerai
+	GOSUB transfert %oretypes #backpackid *sacminerai
 	EVENT sysMessage [INFO] Transfert des lingots dans le sac de stockage
-	GOSUB transfert %ingottypes #backpackid %sacstockage
+	GOSUB transfert %ingottypes #backpackid *sacstockage
 	EVENT sysMessage [INFO] Transfert des gems dans le sac de stockage
-	GOSUB transfert %gemtypes #backpackid %sacstockage
+	GOSUB transfert %gemtypes #backpackid *sacstockage
 	WAIT %smallwait
 return
 
@@ -413,10 +428,10 @@ return
 ;=============================================================================
 sub create_pioches
 	WAIT %wait
-	SET #lobjectid %sacpioches
+	SET #lobjectid *sacpioches
 	EVENT macro 17 1
 	WAIT %wait
-	FINDITEM %tinkertooltype C_ , %sacpioches
+	FINDITEM %tinkertooltype C_ , *sacpioches
 	if #findkind <> -1
 	{
 		EVENT sysMessage [INFO] Recuperation d'un tinker tool kit
@@ -424,10 +439,10 @@ sub create_pioches
 		WAIT %wait
 		EXEVENT dropc #backpackid
 		WAIT %wait
-		SET #lobjectid %sacstockage
+		SET #lobjectid *sacstockage
 		EVENT macro 17 1
 		WAIT %wait
-		FINDITEM %ingottypes C_ , %sacstockage
+		FINDITEM %ingottypes C_ , *sacstockage
 		for #FINDINDEX 1 #FINDCNT
 		{
 			EVENT property #FINDID
@@ -452,15 +467,17 @@ sub create_pioches
 					SET %cx #CONTPOSX + 30
 					SET %cy #CONTPOSY + 110
 					CLICK %cx %cy l
-					WAIT %smallwait
+					WAIT %wait
+					GOSUB gump_wait generic_gump 5
 					SET %cx #CONTPOSX + 385
 					SET %cy #CONTPOSY + 290
 					CLICK %cx %cy l
-					WAIT %smallwait
+					WAIT %wait
+					GOSUB gump_wait generic_gump 5
 					SET %cx #CONTPOSX + 230
 					SET %cy #CONTPOSY + 190
 					CLICK %cx %cy l
-					WAIT %smallwait
+					WAIT %wait
 					GOSUB gump_wait generic_gump 5
 					SET %nb 0
 					WHILE %nb < %createpioches
@@ -473,11 +490,11 @@ sub create_pioches
 						SET %nb %nb + 1
 					}
 					EVENT sysMessage [INFO] Transfert des lingots dans le sac de stockage
-					GOSUB transfert %ingottypes #backpackid %sacstockage
+					GOSUB transfert %ingottypes #backpackid *sacstockage
 					EVENT sysMessage [INFO] Transfert des tinker tool kit dans le sac de pioches
-					GOSUB transfert %tinkertooltype #backpackid %sacpioches
+					GOSUB transfert %tinkertooltype #backpackid *sacpioches
 					EVENT sysMessage [INFO] Transfert des pioches dans le sac de pioches
-					GOSUB transfert %piochetypes #backpackid %sacpioches
+					GOSUB transfert %piochetypes #backpackid *sacpioches
 					GOSUB get_pioches
 					return
 				}
@@ -493,13 +510,13 @@ return
 ;=============================================================================
 sub get_pioches
 	WAIT %wait
-	SET #lobjectid %sacpioches
+	SET #lobjectid *sacpioches
 	EVENT macro 17 1
 	WAIT %smallwait
 	SET %nb 0
 	WHILE %nb < %nbpioches
 	{
-		FINDITEM %piochetypes C_ , %sacpioches
+		FINDITEM %piochetypes C_ , *sacpioches
 		if #findkind <> -1
 		{
 			EXEVENT drag #findid 1
@@ -575,7 +592,7 @@ start:
 				if #maxweight < #weight
 				{
 					EVENT sysMessage [INFO] Backpack plein, transfert dans la beetle
-					GOSUB transfert %oretypes #backpackid %sacbeetle %stacksize
+					GOSUB transfert %oretypes #backpackid *sacbeetle %stacksize
 					GOSUB check_beetle_full
 					if #result = #TRUE
 					{
@@ -591,7 +608,7 @@ start:
 			else
 			{
 				EVENT sysMessage [INFO] Backpack plein, transfert dans la beetle
-				GOSUB transfert %oretypes #backpackid %sacbeetle %stacksize
+				GOSUB transfert %oretypes #backpackid *sacbeetle %stacksize
 				EVENT sysMessage [INFO] Plus de pioches
 				GOSUB mount
 				EVENT sysMessage [INFO] Retour a la maison
@@ -602,7 +619,7 @@ start:
 		}
 next:
 		EVENT sysMessage [INFO] Transfert du minerai dans la beetle
-		GOSUB transfert %oretypes #backpackid %sacbeetle %stacksize
+		GOSUB transfert %oretypes #backpackid *sacbeetle %stacksize
 		GOSUB check_beetle_full
 		if #result = #TRUE
 		{
