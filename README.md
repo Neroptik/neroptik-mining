@@ -18,10 +18,9 @@
 * Open regedit as Administrator
 	* Find the key "HKCUser/Software/EasyUO/"
 	* The value of "ExePath" should be the UO directory. If not then create it.
-* Start the script
-
-Enjoy !
-
-I found another guide from MSDN on how the user can suppress system and application error messages from occurring on an embedded system. The registry location is at the following, by default the value data is 0 and we should change it to 2 to set all messages to invisible. HKEY_LOCAL_MACHINE\SYSTEM\ControlSet001\Control\Windows\ErrorMode. Weirdly even after doing all that, it’s still not enough to disable the error window when the game server crashes. So I continue digging and I found that there’s another important registry key which you need to modify in order to totally suppress the “.exe has stopped working” dialog.” Go to the following registry location and change the value data to 1. HKEY_CURRENT_USER\Software\ Microsoft\Windows\Windows Error Reporting\DontShowUI
-
-Read More: https://www.raymond.cc/blog/disable-program-has-stopped-working-error-dialog-in-windows-server-2008/
+	* Set the value of "HKEY_LOCAL_MACHINE\SYSTEM\ControlSet001\Control\Windows\ErrorMode" to 2
+	* Set the value of "HKEY_CURRENT_USER\Software\ Microsoft\Windows\Windows Error Reporting\DontShowUI" to 1
+* Install RestartOnCrash and configure it in order to restart the UO client on crash
+* Install Java JRE
+* Run the sikuli script StartScript.sikuli as Administrator. This script launch the EasyUO script when the client crashed.
+* Enjoy !
