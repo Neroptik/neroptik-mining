@@ -4,10 +4,12 @@ X Transfert des gems
 X Fabrication pioches
 X Bug quand 2 spot vides d'affilé
 X Bug quand Beetle pleine (torune en boucle sur un gros tas)
+X Auto restart du client et des scripts quand UO crash
 - refait des tinker tool kit auto
 - Vies restantes
 - Ramassage minerai a proximité
 - Mise en place d'un menu
 - Gestion liste de runebook
+- Ferme le gump de tinker quand fini
 
-
+King-efghi-jkl
