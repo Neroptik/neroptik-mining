@@ -1,0 +1,490 @@
+;=============================================================================
+; DECLARATIONS CONSTANTES
+;=============================================================================
+SET %smallwait 8
+SET %wait 12
+SET %bigwait 28
+
+;=============================================================================
+; DECLARATIONS VARIABLES
+;=============================================================================
+SET %CREATEITEM #TRUE
+SET %FILLBOD #TRUE
+SET %outiltypes TBG
+SET %BODTYPES EYM
+SET %CURITEM N/A
+SET %MATERIALS ENK
+SET %MATERIALSQTY 400
+
+;=============================================================================
+; DECLARATIONS MENU
+;=============================================================================
+MENU window title AutoBOD 1.0
+MENU window size 150 100
+MENU window color black
+MENU Button button_new 10 20 130 25 Nouveau BOD
+MENU Button button_make 10 55 130 25 Faire les BOD
+MENU show
+
+;=============================================================================
+; REPLACE
+; Remplace une string par une autre dans une string donnée
+; Param 1 : haystack
+; Param 2 : from
+; Param 3 : to
+;=============================================================================
+SUB replace
+  SET %lpc #LPC
+  linesPerCycle 500
+  SET %st 1
+  SET %str %1
+  STR LEN %2
+  SET %findlen #STRRES
+  STR LEN %3
+  SET %replen #STRRES
+  STR LEN %str
+  SET %len #STRRES
+clean:
+  FOR %i %st %len
+  {
+    STR MID %str %i %findlen
+    SET %find #STRRES
+    IF %find = %2
+    {
+      STR DEL %str %i %findlen
+      SET %str #STRRES
+      IF %3 <> _BLANK_
+      {
+        STR INS %str %3 %i
+        SET %str #STRRES
+        SET %st %st + %findlen
+        STR LEN %str
+        SET %len #STRRES
+        GOTO clean
+      }
+      else
+      {
+        STR LEN %str
+        SET %len #STRRES
+        SET %st %i
+        GOTO clean
+      }
+    }
+    else
+    {
+      SET %st %st + 1
+    }
+  }
+linesPerCycle %lpc
+RETURN %str
+
+;=============================================================================
+; GUMP_WAIT
+; Attend l'apparition d'un gump
+; param 1 : Gump
+; param 2 : Timeout
+; param 3 : Mode
+;=============================================================================
+sub gump_wait
+	if %0 > 0
+		SET %gump %1
+	if %0 > 2
+		SET %mode %3
+	SET %gtimeout #scnt + %gumptimeout
+	if %0 > 1
+		SET %gtimeout #scnt + %2
+	for %gump_wait #false #true
+	{
+		SET %1 #true
+		if #contname <> %gump
+		{
+			SET %gump_wait #false
+		}
+		WAIT %smallwait
+		if #scnt > %gtimeout
+		{
+			if %mode <> FAIL
+			{
+         SET %gump_wait #true
+			}
+		}
+	}
+return
+
+;=============================================================================
+; TRANSFERT
+; Transfert items d'un sac Ã  un autre
+; param 1 : Type des objets Ã  transfÃ©rer
+; param 2 : Sac de dÃ©part
+; param 3 : Sac d'arrivÃ©e
+; param 4 : Stack size
+;=============================================================================
+sub transfert
+	SET %typeobj %1
+	SET %from %2
+	SET %to %3
+	SET #lobjectid %from
+	EVENT macro 17 1
+	WAIT %wait
+	if %0 = 4
+		%size = %4
+	else
+		%size = 0
+	SET %nb 0
+	FINDITEM %typeobj C_ , %from
+	for #FINDINDEX 1 #FINDCNT
+	{
+		if #findkind <> -1
+		{
+			if %size > 0
+				EXEVENT drag #findid %size
+			else
+				EXEVENT drag #findid #findstack
+			WAIT %smallwait
+			EXEVENT dropc %to
+			WAIT %wait
+			if #result = #TRUE
+				break
+		}
+		else
+			break
+		WAIT %wait
+	}
+	WAIT %smallwait
+return
+
+;=============================================================================
+; GETBODTYPE
+; Creer un code pour le BOD
+;=============================================================================
+sub getBODType
+  SET !line %1
+  if Exceptional in !line
+     SET %numline 6
+  else
+     SET %numline 5
+  STR pos !line $ %numline
+  SET %spos #STRRES
+  STR del !line 1 %spos
+  SET !line #STRRES
+  STR pos !line : 1
+  SET %epos #STRRES - 1
+  STR mid !line 1 %epos
+  GOSUB replace #STRRES #SPC _
+return #RESULT
+
+;=============================================================================
+; GETBODAMOUNT
+; Creer un code pour le BOD
+;=============================================================================
+sub getBODAmount
+  SET !line %1
+  if Exceptional in !line
+     SET %numline 6
+  else
+     SET %numline 5
+  STR pos !line $ %numline
+  SET %spos #STRRES - 2
+  SET %epos 2
+  STR mid !line %spos %epos
+return #STRRES
+
+;=============================================================================
+; GETNEXTPOS
+; Donne le prochian couple _X_Y dans le gump
+;=============================================================================
+sub getNextPos
+   SET %res X
+   SET %seq %1
+   STR Pos %seq _ 3
+   if #STRRES > 0
+   {
+      SET %len #STRRES - 1
+      STR del %seq 1 %len
+      SET %res #STRRES
+   }
+return #STRRES
+
+;=============================================================================
+; GETX
+; Donne la position X
+;=============================================================================
+sub getX
+   SET %seq %1
+   STR Pos %seq _ 2
+   SET %start 2
+   SET %end #STRRES - %start
+   STR Mid %seq %start %end
+return #STRRES
+
+;=============================================================================
+; GETY
+; Donne la position Y
+;=============================================================================
+sub getY
+   SET %seq %1
+   STR Pos %seq _ 2
+   SET %start #STRRES + 1
+   STR Pos %seq _ 3
+   if #STRRES = 0
+   {
+       SET %pos %start - 1
+       STR Del %seq 1 %pos
+   }
+   else
+   {
+       SET %end #STRRES - %start
+       STR Mid %seq %start %end
+   }
+return #STRRES
+
+;=============================================================================
+; CHECKMATERIALS
+; Verifie la quantité de materieux restants
+;=============================================================================
+sub checkMaterials
+   FINDITEM %MATERIALS C_ , #backpackid
+   if #findkind <> -1
+	 {
+	    if #FINDSTACK < 100
+	    {
+         GOSUB transfert %MATERIALS #BACKPACKID %BODFROM
+         ;GOSUB transfert %MATERIALS %BODFROM #BACKPACKID %MATERIALSQTY
+         FINDITEM %MATERIALS C_ , %BODFROM
+         if #findkind <> -1
+  			 {
+    				EXEVENT drag #findid %MATERIALSQTY
+    				WAIT %smallwait
+    				EXEVENT dropc #BACKPACKID
+    				WAIT %wait
+			   }
+      }
+	 }
+return
+
+;=============================================================================
+; CREATEITEMS
+; Creer un code pour le BOD
+;=============================================================================
+sub createItems
+    if %CREATEITEM = #TRUE
+    {
+      SET %props %2
+      if 10 in %props
+         SET %count 10
+      if 15 in %props
+         SET %count 15
+      if 20 in %props
+         SET %count 20
+      EVENT sysMessage [INFO] Creating %count items
+      WHILE %count <> 0
+      {
+          SET %seq %1
+          GOSUB checkMaterials
+      		EVENT sysMessage [INFO] Cherche outils dans le backpack
+      		FINDITEM %outiltypes C_ , #backpackid
+      		if #findkind <> -1
+      		{
+      		    WAIT %smallwait
+      				SET #lobjectid #findid
+      				EVENT macro 17 0
+      				GOSUB gump_wait generic_gump 5
+      				WAIT %smallwait
+      				SET %cposx #CONTPOSX
+              SET %cposy #CONTPOSY
+              WHILE #TRUE
+              {
+                  STR Len %seq
+          				if #STRRES > 1
+          				{
+                    GOSUB getX %seq
+            				SET %posx #RESULT + %cposx
+            				GOSUB getY %seq
+            				SET %posy #RESULT + %cposy
+          					CLICK %posx %posy l
+          					GOSUB gump_wait generic_gump 10 FAIL
+          					WAIT %smallwait
+            				GOSUB getNextPos %seq
+          				  SET %seq #RESULT
+                  }
+                  else
+                      break
+              }
+          }
+      		else
+      		{
+      		    DISPLAY Plus d'outils
+      		}
+      		SET %count %count - 1
+       }
+    }
+return
+
+;=============================================================================
+; FILLBOD
+; Remplis le BOD
+;=============================================================================
+sub fillBOD
+    if %FILLBOD = #TRUE
+    {
+      SET %BODID %1
+      FINDITEM * C_ , #backpackid
+      for #FINDINDEX 1 #FINDCNT
+  		{
+          SET %itemid #FINDID
+          WAIT %smallwait
+          EVENT property %itemid
+          if Durability in #PROPERTY
+          {
+              WAIT %wait
+              if #TARGCURS <> 1
+              {
+                SET #lobjectid %BODID
+            		EVENT macro 17 1
+            		GOSUB gump_wait generic_gump
+            		SET %posx #CONTPOSX + 137
+            		SET %posy #CONTPOSY + 203
+                CLICK %posx %posy l
+                WAIT %wait
+              }
+              SET #ltargetid %itemid
+              WAIT %smallwait
+              EVENT macro 22 1
+          }
+      }
+      GOSUB gump_wait generic_gump
+  		SET %posx #CONTPOSX + 137
+  		SET %posy #CONTPOSY + 225
+      CLICK %posx %posy l
+   }
+return
+
+;=============================================================================
+; NEWBOD
+; Declaration d'un nouveau BOD.
+;=============================================================================
+sub newBOD
+  MENU hide
+  ; Identification du BOD
+  SET #LTARGETID N/A
+  DISPLAY OK Selectionnez le BOD $
+  SET #TARGCURS 1
+  WHILE #TARGCURS = 1
+  	WAIT 1
+  SET %BODID #LTARGETID
+  EVENT property %BODID
+  SET %BODPROPS #property
+  GOSUB getBODType %BODPROPS
+  ; Creation de la variable
+  SET %VARNAME F_ , #RESULT
+  SET %FULLVARNAME BOD_ , %VARNAME
+  EVENT sysMessage [INFO] BOD Code : %FULLVARNAME
+  ; Click sur la categorie
+  WAIT 20
+  DISPLAY OK Ouvrez votre outil ou cliquez dans le gump pour démarrer. $
+  GOSUB gump_wait generic_gump 10
+  SET %cposx #CONTPOSX
+  SET %cposy #CONTPOSY
+  EVENT sysMessage [INFO] Outil detecte a la position x: %cposx y: %cposy
+  EVENT sysMessage [INFO] Ne pas deplacer la fenetre de l'outil
+  EVENT sysMessage [INFO] Enregistrement de la sequence
+  EVENT sysMessage <x> pour enregistrer un clic
+  EVENT sysMessage <s> pour stoper l'enregistrement
+  SET %seq
+  REPEAT
+    onhotkey x
+    {
+      SET %posx #CURSORX - %cposx
+      SET %posy #CURSORY - %cposy
+      SET %seq %seq , _ , %posx , _ , %posy
+      EVENT sysMessage [INFO] Clic à la position x: %posx y: %posy
+    }
+    onhotkey s
+    {
+      EVENT sysMessage [INFO] Sequence finale : %seq
+      SET *BOD_ . %VARNAME %seq
+      GOTO Stop
+    }
+    sleep 1
+  UNTIL #FALSE
+Stop:
+  MENU show
+return
+
+;=============================================================================
+; MAKEBOD
+; Fais tous les BOD connus
+;=============================================================================
+sub makeBOD
+  DISPLAY OK Selectionnez le coffre contenant les BOD vierges $
+  SET #TARGCURS 1
+  WHILE #TARGCURS = 1
+  	WAIT 1
+  SET %BODFROM #LTARGETID
+  DISPLAY OK Selectionnez le coffre ou deposer les BOD finis $
+  SET #TARGCURS 1
+  WHILE #TARGCURS = 1
+  	WAIT 1
+  SET %BODTO #LTARGETID
+  DISPLAY OK Selectionnez le coffre ou deposer les BOD inconnus ou larges $
+  SET #TARGCURS 1
+  WHILE #TARGCURS = 1
+  	WAIT 1
+  SET %BODUNKNOWN #LTARGETID
+  EVENT sysMessage Ouverture du coffre a BOD vierges
+  SET #lobjectid %BODFROM
+	EVENT macro 17 0
+	WAIT 2
+  SET %nb 0
+  WHILE %nb < 5
+  {
+      FINDITEM %BODTYPES C_ , %BODFROM
+      if #FINDCNT > 0
+      {
+           EVENT property #findid
+           GOSUB getBODType #property
+           SET %VARNAME F_ , #RESULT
+           STR Len *BOD_ . %VARNAME
+           STR Mid *BOD_ . %VARNAME 1 1
+           SET %prefix #STRRES
+           if Large in #property || Exceptional in #property || %prefix <> _
+           {
+              EVENT sysMessage BOD %VARNAME inconnu
+              GOSUB transfert #findid %BODFROM %BODUNKNOWN
+           }
+           else
+           {
+              EVENT sysMessage BOD %VARNAME connu tranfert dans le backpack
+              SET %BODID #findid
+              GOSUB transfert %BODID %BODFROM #BACKPACKID
+              GOSUB createItems *BOD_ . %VARNAME #property
+              GOSUB fillBOD %BODID
+              GOSUB transfert %BODID #BACKPACKID %BODTO
+           }
+      }
+      else
+      {
+          SET %nb %nb + 1
+      }
+  }
+return
+
+;=============================================================================
+; BOUCLE DE MENU
+;=============================================================================
+Set #MenuButton N/A
+MenuLoop:
+   If #MenuButton <> N/A
+   {
+      If #MenuButton = button_new
+      {
+         GOSUB newBOD
+         Set #MenuButton N/A
+      }
+      If #MenuButton = button_make
+      {
+         GOSUB makeBOD
+         Set #MenuButton N/A
+      }
+   }
+Goto MenuLoop
