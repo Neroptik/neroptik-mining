@@ -1,29 +1,57 @@
 ;=============================================================================
 ; DECLARATIONS CONSTANTES
 ;=============================================================================
-SET %smallwait 8
-SET %wait 12
-SET %bigwait 28
+SET %SMALLWAIT 8
+SET %WAIT 12
+SET %BS_TOOLS TBG
+SET %TL_TOOLS HAG
+SET %BS_MATERIALS ENK
+SET %TL_MATERIALS CUI
+SET %TL_LEATHER JJG
+SET %MATERIALS_QTY 400
+SET %BODTYPES EYM
+SET %FINDBOD_RETRIES 4
+SET %FILLBOD_RETRIES 2
+SET %FILLEDBOD 0
+SET %FAILEDBOD 0
 
 ;=============================================================================
-; DECLARATIONS VARIABLES
+; DECLARATIONS GLOBALES
 ;=============================================================================
-SET %CREATEITEM #TRUE
-SET %FILLBOD #TRUE
-SET %outiltypes TBG
-SET %BODTYPES EYM
-SET %CURITEM N/A
-SET %MATERIALS ENK
-SET %MATERIALSQTY 400
+SET %CURRRENT_MODE N/A
+SET %EXCEPT N/A
+SET %CREATEITEM N/A
+SET %FILLBOD N/A
+SET %CURRENT_TOOL N/A
+SET %CURRENT_MATERIALS N/A
+SET %PREFIX N/A
 
 ;=============================================================================
 ; DECLARATIONS MENU
 ;=============================================================================
-MENU window title AutoBOD 1.0
-MENU window size 150 100
-MENU window color black
-MENU Button button_new 10 20 130 25 Nouveau BOD
-MENU Button button_make 10 55 130 25 Faire les BOD
+MENU window title AutoBOD 2.0
+MENU window size 350 215
+MENU window color $EEEEEE
+MENU Button button_new 10 50 150 25 Nouveau BOD
+MENU Button button_make 10 85 150 25 Faire les BOD
+MENU Combo Create mode 10 15 150
+MENU Combo Add mode Forgeo
+MENU Combo Add mode Tailo (Tissu)
+MENU Combo Add mode Tailo (Cuir)
+MENU Combo Select mode 1
+MENU Check create 10 120 150 20 #true Creer les items
+MENU Check fill 10 140 150 20 #true Remplir les BOD
+MENU Check except 10 160 150 20 #false Faire les BOD except
+MENU Text tmode 170 15 Mode : N/A
+MENU Text tbodcode 170 30 BOD : N/A
+MENU Text tbodamount 170 45 Total : N/A
+MENU Text tbodcurrent 170 60 Nb : 0
+MENU Text tdone 170 85 BOD remplis : 0
+MENU Text tfailed 170 100 BOD inconnus : 0
+MENU Font Align center
+menu Font Color $00009C
+menu Font Style b
+MENU Text tlog 10 190 #SPC
 MENU show
 
 ;=============================================================================
@@ -88,28 +116,38 @@ RETURN %str
 sub gump_wait
 	if %0 > 0
 		SET %gump %1
-	if %0 > 2
-		SET %mode %3
-	SET %gtimeout #scnt + %gumptimeout
-	if %0 > 1
-		SET %gtimeout #scnt + %2
-	for %gump_wait #false #true
+  if %0 > 1
+  {
+		SET %gtimeout #SCNT + %2
+		SET %mode FAIL
+  }
+  SET %found #FALSE
+  SET %gump_wait #TRUE
+	WHILE %gump_wait <> #FALSE
 	{
-		SET %1 #true
+    If #MenuButton = Closed
+       HALT
 		if #contname <> %gump
 		{
-			SET %gump_wait #false
+       SET %found #FALSE
 		}
-		WAIT %smallwait
-		if #scnt > %gtimeout
+		else
 		{
-			if %mode <> FAIL
-			{
-         SET %gump_wait #true
-			}
+		   SET %found #TRUE
 		}
+		if %found = #FALSE
+		{
+       If #scnt > %gtimeout && %mode = FAIL
+		   {
+		      SET %gump_wait #FALSE
+		   }
+		}
+		else
+		{
+       SET %gump_wait #FALSE
+    }
 	}
-return
+return %found
 
 ;=============================================================================
 ; TRANSFERT
@@ -134,6 +172,8 @@ sub transfert
 	FINDITEM %typeobj C_ , %from
 	for #FINDINDEX 1 #FINDCNT
 	{
+    If #MenuButton = Closed
+       HALT
 		if #findkind <> -1
 		{
 			if %size > 0
@@ -243,21 +283,17 @@ return #STRRES
 ; Verifie la quantité de materieux restants
 ;=============================================================================
 sub checkMaterials
-   FINDITEM %MATERIALS C_ , #backpackid
-   if #findkind <> -1
+   FINDITEM %CURRENT_MATERIALS C_ , #BACKPACKID
+   if #findkind = -1 || #FINDSTACK < 100
 	 {
-	    if #FINDSTACK < 100
-	    {
-         GOSUB transfert %MATERIALS #BACKPACKID %BODFROM
-         ;GOSUB transfert %MATERIALS %BODFROM #BACKPACKID %MATERIALSQTY
-         FINDITEM %MATERIALS C_ , %BODFROM
-         if #findkind <> -1
-  			 {
-    				EXEVENT drag #findid %MATERIALSQTY
-    				WAIT %smallwait
-    				EXEVENT dropc #BACKPACKID
-    				WAIT %wait
-			   }
+	    GOSUB transfert %CURRENT_MATERIALS #BACKPACKID %BODFROM
+      FINDITEM %CURRENT_MATERIALS C_ , %BODFROM
+      if #findkind <> -1
+  		{
+    	    EXEVENT Drag #FINDID %MATERIALS_QTY
+    		  WAIT %SMALLWAIT
+    		  EXEVENT Dropc #BACKPACKID
+          WAIT %SMALLWAIT
       }
 	 }
 return
@@ -267,8 +303,8 @@ return
 ; Creer un code pour le BOD
 ;=============================================================================
 sub createItems
-    if %CREATEITEM = #TRUE
-    {
+   if %CREATEITEM = -1
+   {
       SET %props %2
       if 10 in %props
          SET %count 10
@@ -276,48 +312,68 @@ sub createItems
          SET %count 15
       if 20 in %props
          SET %count 20
-      EVENT sysMessage [INFO] Creating %count items
+      MENU Set tbodamount Total : %count
+      MENU Set tlog Creating %count items
+      SET %total %count
+      MENU Set tlog Creation des items
       WHILE %count <> 0
       {
-          SET %seq %1
-          GOSUB checkMaterials
-      		EVENT sysMessage [INFO] Cherche outils dans le backpack
-      		FINDITEM %outiltypes C_ , #backpackid
-      		if #findkind <> -1
-      		{
-      		    WAIT %smallwait
-      				SET #lobjectid #findid
-      				EVENT macro 17 0
-      				GOSUB gump_wait generic_gump 5
-      				WAIT %smallwait
-      				SET %cposx #CONTPOSX
-              SET %cposy #CONTPOSY
-              WHILE #TRUE
-              {
-                  STR Len %seq
-          				if #STRRES > 1
-          				{
-                    GOSUB getX %seq
-            				SET %posx #RESULT + %cposx
-            				GOSUB getY %seq
-            				SET %posy #RESULT + %cposy
-          					CLICK %posx %posy l
-          					GOSUB gump_wait generic_gump 10 FAIL
-          					WAIT %smallwait
-            				GOSUB getNextPos %seq
-          				  SET %seq #RESULT
-                  }
-                  else
-                      break
-              }
-          }
-      		else
-      		{
-      		    DISPLAY Plus d'outils
-      		}
-      		SET %count %count - 1
-       }
-    }
+
+         If #MenuButton = Closed
+            HALT
+         SET %seq %1
+         GOSUB checkMaterials
+         GOSUB gump_wait generic_gump 2
+         If #RESULT = #FALSE
+         {
+             MENU Set tlog Cherche outils dans le backpack
+             FINDITEM %CURRENT_TOOL C_ , #BACKPACKID
+             if #FINDKIND <> -1
+             {
+                 SET #lobjectid #findid
+  		           EVENT macro 17 0
+        		     GOSUB gump_wait generic_gump
+             }
+             else
+             {
+                 MENU Set tlog ERROR : Plus d'outils
+                 HALT
+             }
+         }
+         GOSUB gump_wait generic_gump 2
+         If #RESULT = #TRUE
+         {
+            SET %cposx #CONTPOSX
+            SET %cposy #CONTPOSY
+            STR Len %seq
+            WHILE #STRRES > 1
+            {
+               If #MenuButton = Closed
+                  HALT
+               GOSUB getX %seq
+               SET %posx #RESULT + %cposx
+               GOSUB getY %seq
+               SET %posy #RESULT + %cposy
+            	 CLICK %posx %posy l
+      	       GOSUB gump_wait generic_gump 8
+             	 GOSUB getNextPos %seq
+           		 SET %seq #RESULT
+               STR Len %seq
+               WAIT %SMALLWAIT
+            }
+
+            SET %count %count - 1
+            SET %done %total - %count
+            MENU Set tlog Creation des items ( , %done , #SPC , / , #SPC , %total , )
+            MENU Set tbodcurrent Nb : %done
+         }
+      }
+      GOSUB gump_wait generic_gump 8
+      SET %posx %cposx + 35
+      SET %posy %cposy + 554
+      CLICK  %posx %posy l
+      WAIT %SMALLWAIT
+  }
 return
 
 ;=============================================================================
@@ -325,38 +381,128 @@ return
 ; Remplis le BOD
 ;=============================================================================
 sub fillBOD
-    if %FILLBOD = #TRUE
+    if %FILLBOD = -1
     {
-      SET %BODID %1
-      FINDITEM * C_ , #backpackid
-      for #FINDINDEX 1 #FINDCNT
-  		{
-          SET %itemid #FINDID
-          WAIT %smallwait
-          EVENT property %itemid
-          if Durability in #PROPERTY
-          {
-              WAIT %wait
-              if #TARGCURS <> 1
+       MENU Set tlog Remplissage du BOD
+       SET %BODID %1
+       SET #lobjectid %BODID
+    	 EVENT macro 17 1
+    	 GOSUB gump_wait generic_gump
+    	 SET %posx #CONTPOSX + 137
+    	 SET %posy #CONTPOSY + 203
+       CLICK %posx %posy l
+       WAIT %SMALLWAIT
+       SET %RETRY 0
+       WHILE %RETRY < %FILLBOD_RETRIES
+       {
+          If #MenuButton = Closed
+             HALT
+          FINDITEM * C_ , #BACKPACKID
+          For #FINDINDEX 1 #FINDCNT
+      		{
+              If #MenuButton = Closed
+                 HALT
+              SET %itemid #FINDID
+              EVENT property %itemid
+              If Durability in #PROPERTY || Crafted in #PROPERTY
               {
-                SET #lobjectid %BODID
-            		EVENT macro 17 1
-            		GOSUB gump_wait generic_gump
-            		SET %posx #CONTPOSX + 137
-            		SET %posy #CONTPOSY + 203
-                CLICK %posx %posy l
-                WAIT %wait
+                  if #TARGCURS <> 1
+                  {
+                       SET #lobjectid %BODID
+                		   EVENT macro 17 1
+                		   GOSUB gump_wait generic_gump
+                		   SET %posx #CONTPOSX + 137
+                		   SET %posy #CONTPOSY + 203
+                       CLICK %posx %posy l
+                       WAIT %WAIT
+                  }
+                  WAIT %SMALLWAIT
+                  SET #ltargetid %itemid
+                  EVENT macro 22 1
+                  WAIT %WAIT
               }
-              SET #ltargetid %itemid
-              WAIT %smallwait
-              EVENT macro 22 1
           }
+          SET %RETRY %RETRY + 1
       }
       GOSUB gump_wait generic_gump
   		SET %posx #CONTPOSX + 137
   		SET %posy #CONTPOSY + 225
       CLICK %posx %posy l
+      WAIT %SMALLWAIT
+      if #TARGCURS = 1
+      {
+         SET #TARGCURS 0
+      }
    }
+return
+
+;=============================================================================
+; MAKEBOD
+; Fais tous les BOD connus
+;=============================================================================
+sub makeBOD
+  MENU Set tlog Selectionnez le coffre contenant les BOD vierges
+  SET #TARGCURS 1
+  WHILE #TARGCURS = 1
+  	WAIT 1
+  SET %BODFROM #LTARGETID
+  MENU Set tlog Selectionnez le coffre ou deposer les BOD finis
+  SET #TARGCURS 1
+  WHILE #TARGCURS = 1
+  	WAIT 1
+  SET %BODTO #LTARGETID
+  MENU Set tlog Selectionnez le coffre ou deposer les BOD inconnus
+  SET #TARGCURS 1
+  WHILE #TARGCURS = 1
+  	WAIT 1
+  SET %BODUNKNOWN #LTARGETID
+  MENU Set tlog Ouverture du coffre de BOD
+  SET #lobjectid %BODFROM
+	EVENT macro 17 0
+	WAIT %SMALLWAIT
+  SET %nb 0
+  WHILE %nb < %FINDBOD_RETRIES
+  {
+      If #MenuButton = Closed
+         HALT
+      FINDITEM %BODTYPES C_ , %BODFROM
+      if #FINDCNT > 0
+      {
+          EVENT property #findid
+          GOSUB getBODType #property
+          SET %VARNAME %PREFIX , #RESULT
+          SET %FULLVARNAME BOD_ , %VARNAME
+          MENU Set tbodcode BOD : %FULLVARNAME
+          MENU Set tbodamount Total : N/A
+          MENU Set tbodcurrent Nb : 0
+          STR Len *BOD_ . %VARNAME
+          STR Mid *BOD_ . %VARNAME 1 1
+          SET %p #STRRES
+          If Large in #property || %p <> _ || ( Exceptional in #property && %EXCEPT = #FALSE )
+          {
+              If Exceptional in #property && %EXCEPT = #FALSE
+                  MENU Set tlog %FULLVARNAME est exceptionnel
+              Else
+                  MENU Set tlog %FULLVARNAME est inconnu
+              GOSUB transfert #findid %BODFROM %BODUNKNOWN
+              SET %FAILEDBOD %FAILEDBOD + 1
+              MENU Set tfailed BOD inconnus : %FAILEDBOD
+          }
+          else
+          {
+              MENU Set tlog %FULLVARNAME est connu
+              SET %BODID #findid
+              GOSUB transfert %BODID %BODFROM #BACKPACKID
+              GOSUB createItems *BOD_ . %VARNAME #property
+              GOSUB fillBOD %BODID
+              GOSUB transfert %BODID #BACKPACKID %BODTO
+              SET %FILLEDBOD %FILLEDBOD + 1
+              MENU Set tdone BOD remplis : %FILLEDBOD
+          }
+      }
+      else
+          SET %nb %nb + 1
+  }
 return
 
 ;=============================================================================
@@ -364,10 +510,8 @@ return
 ; Declaration d'un nouveau BOD.
 ;=============================================================================
 sub newBOD
-  MENU hide
-  ; Identification du BOD
   SET #LTARGETID N/A
-  DISPLAY OK Selectionnez le BOD $
+  MENU Set tlog Selectionnez le BOD
   SET #TARGCURS 1
   WHILE #TARGCURS = 1
   	WAIT 1
@@ -376,97 +520,78 @@ sub newBOD
   SET %BODPROPS #property
   GOSUB getBODType %BODPROPS
   ; Creation de la variable
-  SET %VARNAME F_ , #RESULT
+  SET %VARNAME %PREFIX , #RESULT
   SET %FULLVARNAME BOD_ , %VARNAME
-  EVENT sysMessage [INFO] BOD Code : %FULLVARNAME
-  ; Click sur la categorie
-  WAIT 20
-  DISPLAY OK Ouvrez votre outil ou cliquez dans le gump pour démarrer. $
-  GOSUB gump_wait generic_gump 10
-  SET %cposx #CONTPOSX
-  SET %cposy #CONTPOSY
-  EVENT sysMessage [INFO] Outil detecte a la position x: %cposx y: %cposy
-  EVENT sysMessage [INFO] Ne pas deplacer la fenetre de l'outil
-  EVENT sysMessage [INFO] Enregistrement de la sequence
-  EVENT sysMessage <x> pour enregistrer un clic
-  EVENT sysMessage <s> pour stoper l'enregistrement
-  SET %seq
-  REPEAT
-    onhotkey x
-    {
-      SET %posx #CURSORX - %cposx
-      SET %posy #CURSORY - %cposy
-      SET %seq %seq , _ , %posx , _ , %posy
-      EVENT sysMessage [INFO] Clic à la position x: %posx y: %posy
-    }
-    onhotkey s
-    {
-      EVENT sysMessage [INFO] Sequence finale : %seq
-      SET *BOD_ . %VARNAME %seq
-      GOTO Stop
-    }
-    sleep 1
-  UNTIL #FALSE
+  MENU Set tbodcode BOD : %FULLVARNAME
+  MENU Set tlog Ouvrez votre outil ou focus le gump
+  GOSUB gump_wait generic_gump
+  If #RESULT = #TRUE
+  {
+    SET %cposx #CONTPOSX
+    SET %cposy #CONTPOSY
+
+    SET %seq
+    REPEAT
+      MENU Set tlog <x> pour enregistrer un clic <s> pour stopper
+      If #MenuButton = Closed
+         HALT
+      onhotkey x
+      {
+         SET %posx #CURSORX - %cposx
+         SET %posy #CURSORY - %cposy
+         SET %seq %seq , _ , %posx , _ , %posy
+         MENU Set tlog Clic a la position x: %posx y: %posy
+         WAIT %WAIT
+      }
+      onhotkey s
+      {
+         MENU Set tlog %FULLVARNAME : %seq
+         SET *BOD_ . %VARNAME %seq
+         GOTO Stop
+      }
+      WAIT 1
+    UNTIL #FALSE
+  }
+  else
+  {
+     MENU Set tlog Gump not found
+  }
 Stop:
-  MENU show
 return
 
 ;=============================================================================
-; MAKEBOD
-; Fais tous les BOD connus
+; INIT
+; Initialise les variabls globales en fonction du menu
 ;=============================================================================
-sub makeBOD
-  DISPLAY OK Selectionnez le coffre contenant les BOD vierges $
-  SET #TARGCURS 1
-  WHILE #TARGCURS = 1
-  	WAIT 1
-  SET %BODFROM #LTARGETID
-  DISPLAY OK Selectionnez le coffre ou deposer les BOD finis $
-  SET #TARGCURS 1
-  WHILE #TARGCURS = 1
-  	WAIT 1
-  SET %BODTO #LTARGETID
-  DISPLAY OK Selectionnez le coffre ou deposer les BOD inconnus ou larges $
-  SET #TARGCURS 1
-  WHILE #TARGCURS = 1
-  	WAIT 1
-  SET %BODUNKNOWN #LTARGETID
-  EVENT sysMessage Ouverture du coffre a BOD vierges
-  SET #lobjectid %BODFROM
-	EVENT macro 17 0
-	WAIT 2
-  SET %nb 0
-  WHILE %nb < 5
-  {
-      FINDITEM %BODTYPES C_ , %BODFROM
-      if #FINDCNT > 0
-      {
-           EVENT property #findid
-           GOSUB getBODType #property
-           SET %VARNAME F_ , #RESULT
-           STR Len *BOD_ . %VARNAME
-           STR Mid *BOD_ . %VARNAME 1 1
-           SET %prefix #STRRES
-           if Large in #property || Exceptional in #property || %prefix <> _
-           {
-              EVENT sysMessage BOD %VARNAME inconnu
-              GOSUB transfert #findid %BODFROM %BODUNKNOWN
-           }
-           else
-           {
-              EVENT sysMessage BOD %VARNAME connu tranfert dans le backpack
-              SET %BODID #findid
-              GOSUB transfert %BODID %BODFROM #BACKPACKID
-              GOSUB createItems *BOD_ . %VARNAME #property
-              GOSUB fillBOD %BODID
-              GOSUB transfert %BODID #BACKPACKID %BODTO
-           }
-      }
-      else
-      {
-          SET %nb %nb + 1
-      }
-  }
+sub init
+    MENU Set tlog Initialisation...
+    MENU Get mode
+    SET %CURRENT_MODE #menures
+    MENU Set tmode Mode : #menures
+    MENU Get create
+    SET %CREATEITEM #menures
+    MENU Get fill
+    SET %FILLBOD #menures
+    MENU Get except
+    SET %EXCEPT #menures
+    If %CURRENT_MODE = 1
+    {
+       SET %CURRENT_TOOL %BS_TOOLS
+       SET %CURRENT_MATERIALS %BS_MATERIALS
+       SET %PREFIX F_
+    }
+    If %CURRENT_MODE = 2
+    {
+       SET %CURRENT_TOOL %TL_TOOLS
+       SET %CURRENT_MATERIALS %TL_MATERIALS
+       SET %PREFIX T_
+    }
+    If %CURRENT_MODE = 3
+    {
+       SET %CURRENT_TOOL %TL_TOOLS
+       SET %CURRENT_MATERIALS %TL_LEATHER
+       SET %PREFIX C_
+    }
 return
 
 ;=============================================================================
@@ -478,13 +603,19 @@ MenuLoop:
    {
       If #MenuButton = button_new
       {
+         GOSUB init
          GOSUB newBOD
          Set #MenuButton N/A
       }
       If #MenuButton = button_make
       {
+         GOSUB init
          GOSUB makeBOD
          Set #MenuButton N/A
+      }
+      If #MenuButton = Closed
+      {
+         HALT
       }
    }
 Goto MenuLoop
