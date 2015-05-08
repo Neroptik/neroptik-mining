@@ -211,6 +211,7 @@ sub getBODType
   SET %epos #STRRES - 1
   STR mid !line 1 %epos
   GOSUB replace #STRRES #SPC _
+  GOSUB replace #RESULT ' _
 return #RESULT
 
 ;=============================================================================
@@ -428,10 +429,13 @@ sub fillBOD
   		SET %posx #CONTPOSX + 137
   		SET %posy #CONTPOSY + 225
       CLICK %posx %posy l
-      WAIT %SMALLWAIT
+      WAIT %WAIT
       if #TARGCURS = 1
       {
-         SET #TARGCURS 0
+         SET #ltargetid #BACKPACKID
+         EVENT macro 22 1
+         WAIT %SMALLWAIT
+         GOSUB gump_wait generic_gump 5
       }
    }
 return
@@ -446,16 +450,19 @@ sub makeBOD
   WHILE #TARGCURS = 1
   	WAIT 1
   SET %BODFROM #LTARGETID
+  WAIT %SMALLWAIT
   MENU Set tlog Selectionnez le coffre ou deposer les BOD finis
   SET #TARGCURS 1
   WHILE #TARGCURS = 1
   	WAIT 1
   SET %BODTO #LTARGETID
+  WAIT %SMALLWAIT
   MENU Set tlog Selectionnez le coffre ou deposer les BOD inconnus
   SET #TARGCURS 1
   WHILE #TARGCURS = 1
   	WAIT 1
   SET %BODUNKNOWN #LTARGETID
+  WAIT %SMALLWAIT
   MENU Set tlog Ouverture du coffre de BOD
   SET #lobjectid %BODFROM
 	EVENT macro 17 0
@@ -478,7 +485,8 @@ sub makeBOD
           STR Len *BOD_ . %VARNAME
           STR Mid *BOD_ . %VARNAME 1 1
           SET %p #STRRES
-          If Large in #property || %p <> _ || ( Exceptional in #property && %EXCEPT = #FALSE )
+          SET %large Large , #SPC , Bulk
+          If %large in #property || %p <> _ || ( Exceptional in #property && %EXCEPT = #FALSE )
           {
               If Exceptional in #property && %EXCEPT = #FALSE
                   MENU Set tlog %FULLVARNAME est exceptionnel
