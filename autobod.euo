@@ -10,6 +10,9 @@ SET %TL_MATERIALS CUI
 SET %TL_LEATHER JJG
 SET %MATERIALS_QTY 400
 SET %BODTYPES EYM
+SET %PELLE TWF
+SET %PIOCHE QPF
+SET %TISSU BUI
 SET %FINDBOD_RETRIES 4
 SET %FILLBOD_RETRIES 2
 SET %FILLEDBOD 0
@@ -25,23 +28,25 @@ SET %FILLBOD N/A
 SET %CURRENT_TOOL N/A
 SET %CURRENT_MATERIALS N/A
 SET %PREFIX N/A
+SET %REWARD_RUN N/A
 
 ;=============================================================================
 ; DECLARATIONS MENU
 ;=============================================================================
-MENU window title AutoBOD 2.0
-MENU window size 350 215
+MENU window title AutoBOD 3.0
+MENU window size 350 245
 MENU window color $EEEEEE
 MENU Button button_new 10 50 150 25 Nouveau BOD
 MENU Button button_make 10 85 150 25 Faire les BOD
+MENU Button button_reward 10 120 150 25 Rendre les BOD
 MENU Combo Create mode 10 15 150
 MENU Combo Add mode Forgeo
 MENU Combo Add mode Tailo (Tissu)
 MENU Combo Add mode Tailo (Cuir)
 MENU Combo Select mode 1
-MENU Check create 10 120 150 20 #true Creer les items
-MENU Check fill 10 140 150 20 #true Remplir les BOD
-MENU Check except 10 160 150 20 #false Faire les BOD except
+MENU Check create 10 155 150 20 #true Creer les items
+MENU Check fill 10 175 150 20 #true Remplir les BOD
+MENU Check except 10 195 150 20 #false Faire les BOD except
 MENU Text tmode 170 15 Mode : N/A
 MENU Text tbodcode 170 30 BOD : N/A
 MENU Text tbodamount 170 45 Total : N/A
@@ -51,7 +56,7 @@ MENU Text tfailed 170 100 BOD inconnus : 0
 MENU Font Align center
 menu Font Color $00009C
 menu Font Style b
-MENU Text tlog 10 190 #SPC
+MENU Text tlog 10 225 #SPC
 MENU show
 
 ;=============================================================================
@@ -212,6 +217,7 @@ sub getBODType
   STR mid !line 1 %epos
   GOSUB replace #STRRES #SPC _
   GOSUB replace #RESULT ' _
+  GOSUB replace #RESULT - _
 return #RESULT
 
 ;=============================================================================
@@ -440,6 +446,93 @@ sub fillBOD
    }
 return
 
+;===========================================================
+; Name: pathFind
+; Author: ScriptFellow (the.WZA)
+; Parameters: %1 = X
+;             %2 = Y
+;             %3 = Z
+;             %4 = tolerance
+;             %5 = timeout (in seconds)
+; Purpose: Pathfind to the given coordinates
+; Return: %return (#true or #false )
+;-----------------------------------------------------------
+sub pathFind
+  set %_x %1
+  set %_y %2
+  if %0 <= 2 || %2 = N/A
+     set %_z -1
+  else
+     set %_z %3
+  if %0 <= 3 || %3 = N/A
+     set %_tolerance 0
+  else
+     set %_tolerance %4
+  if %0 <= 4
+     set %_endTime #sCnt + 15
+  else
+     set %_endTime #sCnt + %5
+  set %return #false
+  deleteJournal
+  scanJournal 2
+  event PathFind %_x %_y %_z
+_pathFindScanAgain:
+  scanJournal 1
+  if pathfinding in #journal
+     goto _pathFindOkay
+  if can't_get_there in #journal || #sCnt > %_endTime
+     goto _pathFindEnd
+  goto _pathFindScanAgain
+_pathFindOkay:
+  gosub _pathFindDist %_x %_y %_z #charPosX #charPosY #charPosZ
+  set %return %return <= %_tolerance
+  if %return
+  {
+     if %_tolerance > 0
+     {
+        set %1 #cliLeft + #cliXRes / 2
+        set %2 #cliTop + #cliYRes / 2
+        if #charDir < 3
+            set %1 %1 + 1
+        else
+        {
+           if #charDir > 3 && #charDir < 7
+              set %1 %1 - 1
+        }
+        if #charDir = 0 || #charDir = 6
+           set %2 %2 - 1
+        else
+        {
+           if #charDir > 1 && #charDir < 5
+              set %2 %2 + 1
+        }
+        click %1 %2 R
+     }
+     goto _pathFindEnd
+  }
+  if #sCnt > %_endTime
+     goto _pathFindEnd
+  goto _pathFindOkay
+_pathFindEnd:
+return
+
+sub _pathFindDist
+  set %1 %1 - %4 abs
+  set %2 %2 - %5 abs
+  set %3 %3 - %6 abs
+  gosub max %1 %2 %3
+return
+
+; to be defined
+sub max
+  set %return %1
+  for %_idx 2 %0
+  {
+     if % . %_idx > %return
+     set %return % . %_idx
+  }
+return
+
 ;=============================================================================
 ; MAKEBOD
 ; Fais tous les BOD connus
@@ -568,6 +661,128 @@ Stop:
 return
 
 ;=============================================================================
+; REWARDBOD
+; Fais tous les BOD connus
+;=============================================================================
+sub rewardBOD
+  MENU Set tlog Selectionnez le livre contenant les BOD a rendre
+  SET #TARGCURS 1
+  WHILE #TARGCURS = 1
+  	WAIT 1
+  SET %BODFROM #LTARGETID
+  WAIT %SMALLWAIT
+  MENU Set tlog Selectionnez le livre ou stocker les nouveaux BOD
+  SET #TARGCURS 1
+  WHILE #TARGCURS = 1
+  	WAIT 1
+  SET %BODTO #LTARGETID
+  WAIT %SMALLWAIT
+  MENU Set tlog Selectionnez le coffre ou deposer les récompenses
+  SET #TARGCURS 1
+  WHILE #TARGCURS = 1
+  	WAIT 1
+  SET %REWARDS #LTARGETID
+  WAIT %SMALLWAIT
+  MENU Set tlog Selectionnez le vendeur
+  SET #TARGCURS 1
+  WHILE #TARGCURS = 1
+  	WAIT 1
+  SET %VENDOR #LTARGETID
+  WAIT %SMALLWAIT
+  SET %REWARD_RUN #True
+  WHILE %REWARD_RUN = #True
+  {
+    If #MenuButton = button_reward
+    {
+        SET %REWARD_RUN #False
+        MENU Set button_reward Rendre les BOD
+        Set #MenuButton N/A
+        BREAK
+    }
+    MENU Set tlog Ouverture du livre de BOD
+    SET #lobjectid %BODFROM
+  	EVENT macro 17 0
+  	WAIT %SMALLWAIT
+  	GOSUB gump_wait generic_gump 4
+  	MENU Set tlog Recuperation d'un BOD
+  	SET %posx #CONTPOSX + 43
+  	SET %posy #CONTPOSY + 100
+    CLICK %posx %posy l
+  	GOSUB gump_wait generic_gump 4
+  	MENU Set tlog Fermeture du livre
+  	SET %posx #CONTPOSX + 388
+  	SET %posy #CONTPOSY + 426
+    CLICK %posx %posy l
+    WAIT %SMALLWAIT
+    finditem %VENDOR
+    move #FINDX #FINDY 1
+    MENU Set tlog Suivi du vendeur
+    GOSUB pathFind #FINDX #FINDY #FINDZ 1 8
+    finditem %BODTYPES C_ , #BACKPACKID
+    If #FINDKIND <> -1
+    {
+      MENU Set tlog Donne le BOD au vendeur
+      EXEVENT Drag #FINDID
+  	  WAIT %SMALLWAIT
+  	  EXEVENT Dropc %VENDOR
+      WAIT %WAIT
+      MENU Set tlog Ouverture du menu
+      exevent Popup %VENDOR 10 10
+      WAIT %SMALLWAIT
+      GOSUB gump_wait normal_gump 4
+      MENU Set tlog Demande de nouveau BOD
+      CLICK 35 37 l
+      WAIT %SMALLWAIT
+      GOSUB gump_wait generic_gump 4
+      If #RESULT = #False
+      {
+         SET %REWARD_RUN #False
+      }
+      MENU Set tlog Acceptation du nouveau BOD
+      SET %posx #CONTPOSX + 110
+    	SET %posy #CONTPOSY + #CONTSIZEY -  25
+    	CLICK %posx %posy l
+      SET %STOP #SYSTIME + 12000
+      WAIT %WAIT
+      SET %NB 0
+      WHILE %NB < 3
+      {
+        finditem %BODTYPES C_ , #BACKPACKID
+        If #FINDKIND <> -1
+        {
+           MENU Set tlog Rangement du BOD
+           EXEVENT Drag #FINDID
+      	   WAIT %SMALLWAIT
+      	   EXEVENT Dropc %BODTO
+           GOSUB gump_wait generic_gump 4
+           MENU Set tlog Fermeture du livre
+        	 SET %posx #CONTPOSX + 388
+        	 SET %posy #CONTPOSY + 426
+           CLICK %posx %posy l
+           WAIT %SMALLWAIT
+        }
+        SET %NB %NB + 1
+        WAIT %WAIT
+      }
+      GOSUB transfert %PIOCHE #BACKPACKID %REWARDS
+      GOSUB transfert %PELLE #BACKPACKID %REWARDS
+      GOSUB transfert %TISSU #BACKPACKID %REWARDS
+      WHILE #SYSTIME < %STOP
+      {
+         If #MenuButton = button_reward
+         {
+             BREAK
+         }
+         SET %RESTANT ( %STOP - #SYSTIME ) / 1000
+         MENU Set tlog Attente entre les BOD ( %RESTANT )
+         WAIT %SMALLWAIT
+      }
+    }
+  }
+  MENU Set button_reward Rendre les BOD
+return
+
+;=============================================================================
 ; INIT
 ; Initialise les variabls globales en fonction du menu
 ;=============================================================================
@@ -620,6 +835,13 @@ MenuLoop:
          GOSUB init
          GOSUB makeBOD
          Set #MenuButton N/A
+      }
+      If #MenuButton = button_reward
+      {
+         MENU Set button_reward Rendre les BOD (Stop)
+         Set #MenuButton N/A
+         GOSUB init
+         GOSUB rewardBOD
       }
       If #MenuButton = Closed
       {
