@@ -1,8 +1,10 @@
 ;=============================================================================
 ; DECLARATIONS CONSTANTES
 ;=============================================================================
+SET %allcome #smc , #spc , All , #spc , come , #spc , $
 SET %SMALLWAIT 8
 SET %WAIT 12
+SET %BIGWAIT 20
 SET %BS_TOOLS TBG
 SET %TL_TOOLS HAG
 SET %BS_MATERIALS ENK
@@ -13,10 +15,36 @@ SET %BODTYPES EYM
 SET %PELLE TWF
 SET %PIOCHE QPF
 SET %TISSU BUI
+SET %COW NG
+SET %COW2 IG
+SET %BULL YG
+SET %BULL2 XG
+SET %MOUTON PF
+SET %CHEVAL MG
+SET %CHEVAL2 OF
+SET %CHEVAL3 SG
+SET %POULE AG
 SET %FINDBOD_RETRIES 4
 SET %FILLBOD_RETRIES 2
 SET %FILLEDBOD 0
 SET %FAILEDBOD 0
+SET %CUIR JJG
+SET %LAINE OFF
+SET %PLUME VLK
+SET %recallretries 3
+set %corpse YFM
+set %leather_uncutted  EEG_GED_DEG
+set %gold POF_OFF_VLK
+set %leather_cutted JJG
+set %scissors KAG_JAG
+set %weapons CNF_BNF_TSF_WSF_GMH_HNF_TRD_URD_VRH
+set %lootbagtypes ZJF_CKF_LKF
+set %pathzeit 6
+set %backpackdelay 0
+set %mydelay 16
+set %mylinesPerCycle 20
+
+InitEvents
 
 ;=============================================================================
 ; DECLARATIONS GLOBALES
@@ -29,12 +57,20 @@ SET %CURRENT_TOOL N/A
 SET %CURRENT_MATERIALS N/A
 SET %PREFIX N/A
 SET %REWARD_RUN N/A
+SET %RUNEBOOK N/A
+SET %GETCUIR N/A
+SET %GETLAINE N/A
+SET %GETPLUME N/A
+set %myweapon N/A
+SET %SACBEETLE N/A
+SET %pet N/A
+SET %SECURE N/A
 
 ;=============================================================================
 ; DECLARATIONS MENU
 ;=============================================================================
 MENU window title AutoBOD 3.0
-MENU window size 350 245
+MENU window size 540 245
 MENU window color $EEEEEE
 MENU Button button_new 10 50 150 25 Nouveau BOD
 MENU Button button_make 10 85 150 25 Faire les BOD
@@ -47,17 +83,90 @@ MENU Combo Select mode 1
 MENU Check create 10 155 150 20 #true Creer les items
 MENU Check fill 10 175 150 20 #true Remplir les BOD
 MENU Check except 10 195 150 20 #false Faire les BOD except
-MENU Text tmode 170 15 Mode : N/A
-MENU Text tbodcode 170 30 BOD : N/A
-MENU Text tbodamount 170 45 Total : N/A
-MENU Text tbodcurrent 170 60 Nb : 0
-MENU Text tdone 170 85 BOD remplis : 0
-MENU Text tfailed 170 100 BOD inconnus : 0
+MENU Text tmode 330 15 Mode : N/A
+MENU Text tbodcode 330 30 BOD : N/A
+MENU Text tbodamount 330 45 Total : N/A
+MENU Text tbodcurrent 330 60 Nb : 0
+MENU Text tdone 330 85 BOD remplis : 0
+MENU Text tfailed 330 100 BOD inconnus : 0
 MENU Font Align center
+MENU Button button_loot 170 15 150 25 Ressources
+MENU Check getcuir 170 50 150 20 #true Cuir
+MENU Check getlaine 170 70 150 20 #true Laine
+MENU Check getplume 170 90 150 20 #true Plumes
 menu Font Color $00009C
 menu Font Style b
 MENU Text tlog 10 225 #SPC
 MENU show
+
+;=============================================================================
+; RECALL
+; Téléporte aux différents spots
+; param 1 : Numéro de la rune
+;=============================================================================
+sub recall
+	SET %where %1
+	SET %success #false
+	for %attempt 1 %recallretries
+	{
+		SET %oldposx #charposx
+		SET %oldposy #charposy
+		if ! %success
+		{
+			SET #lobjectid %RUNEBOOK
+			EVENT macro 17 0
+			GOSUB gump_wait generic_gump 5
+			CONTPOS 0 0
+			goto case_ , %where
+case_1:
+case_2:
+			CLICK 140 200
+goto endcase
+case_3:
+case_4:
+			CLICK 175 200
+goto endcase
+case_5:
+case_6:
+			CLICK 210 200
+goto endcase
+case_7:
+case_8:
+			CLICK 245 200
+goto endcase
+case_9:
+case_10:
+			CLICK 310 200
+goto endcase
+case_11:
+case_12:
+			CLICK 345 200
+goto endcase
+case_13:
+case_14:
+			CLICK 380 200
+goto endcase
+case_15:
+case_16:
+			CLICK 415 200
+endcase:
+			WAIT %wait
+			SET %cl %where + 1
+			SET %cl %cl % 2
+			SET %CLICKx ( 140 + ( %cl * 160 )  )
+			SET %CLICKy 145
+			CLICK %CLICKx %CLICKy
+			WAIT %bigwait
+			WAIT %bigwait
+			WAIT %bigwait
+		}
+		if ! ( %oldposx = #charposx && %oldposy = #charposy )
+		{
+			SET %success #true
+			SET %recallwait #true
+		}
+	}
+return
 
 ;=============================================================================
 ; REPLACE
@@ -132,6 +241,13 @@ sub gump_wait
 	{
     If #MenuButton = Closed
        HALT
+    If #MenuButton = button_reward
+    {
+        SET %REWARD_RUN #False
+        MENU Set button_reward Rendre les BOD
+        Set #MenuButton N/A
+        BREAK
+    }
 		if #contname <> %gump
 		{
        SET %found #FALSE
@@ -737,6 +853,7 @@ sub rewardBOD
       If #RESULT = #False
       {
          SET %REWARD_RUN #False
+         CONTINUE
       }
       MENU Set tlog Acceptation du nouveau BOD
       SET %posx #CONTPOSX + 110
@@ -745,11 +862,13 @@ sub rewardBOD
       SET %STOP #SYSTIME + 12000
       WAIT %WAIT
       SET %NB 0
+      SET %BODFOUND #False
       WHILE %NB < 3
       {
         finditem %BODTYPES C_ , #BACKPACKID
         If #FINDKIND <> -1
         {
+           SET %BODFOUND #True
            MENU Set tlog Rangement du BOD
            EXEVENT Drag #FINDID
       	   WAIT %SMALLWAIT
@@ -763,6 +882,11 @@ sub rewardBOD
         }
         SET %NB %NB + 1
         WAIT %WAIT
+      }
+      If %BODFOUND = #False
+      {
+         SET %REWARD_RUN #False
+         CONTINUE
       }
       GOSUB transfert %PIOCHE #BACKPACKID %REWARDS
       GOSUB transfert %PELLE #BACKPACKID %REWARDS
@@ -782,6 +906,597 @@ sub rewardBOD
   MENU Set button_reward Rendre les BOD
 return
 
+
+;=============================================================================
+; AGGROALL
+; Aggro tous les monstre d'un type
+;=============================================================================
+sub aggroAll
+{
+    SET %AGGROTYPE %1
+    FINDITEM %AGGROTYPE
+  	for #FINDINDEX 1 #FINDCNT
+  	{
+        If #MenuButton = Closed
+           HALT
+    		if #findkind <> -1
+    		{
+           SET #ltargetid #FINDID
+           EVENT macro 27 0
+    		}
+    		WAIT %wait
+  	}
+  	return
+}
+
+;=============================================================================
+; SETWARMODE
+; Active le war mode
+;=============================================================================
+SUB setWarMode
+{
+    if G notin #charStatus
+    {
+        EVENT macro 6 0
+        WAIT %BIGWAIT
+    }
+    return
+}
+
+;=============================================================================
+; UNSETWARMODE
+; Active le war mode
+;=============================================================================
+SUB unsetWarMode
+{
+    if G in #charStatus
+    {
+        EVENT macro 6 0
+        WAIT %BIGWAIT
+    }
+    return
+}
+
+;=============================================================================
+; CHECKENNEMY
+; Check if ennemy are attacking
+;=============================================================================
+SUB checkEnnemy
+{
+    SET %CURHITS #HITS
+    MENU Set tlog Check ennemis
+    SET %gtimeout #SCNT + 6
+    WHILE #SCNT < %gtimeout
+    {
+        If #MenuButton = Closed
+           HALT
+        WAIT %WAIT
+    }
+    If #HITS <> %CURHITS
+       return #True
+    return #False
+}
+
+;=============================================================================
+; KILLALL
+; Active le war mode
+;=============================================================================
+SUB killAll
+{
+    EVENT Macro 15 	115 ;Cast Wither
+    SET %gtimeout #SCNT + 3
+    WHILE #SCNT < %gtimeout
+        WAIT %WAIT
+    EVENT Macro 15 	115 ;Cast Wither
+    SET %gtimeout #SCNT + 3
+    WHILE #SCNT < %gtimeout
+        WAIT %WAIT
+    EVENT Macro 15 	115 ;Cast Wither
+    SET %gtimeout #SCNT + 3
+    WHILE #SCNT < %gtimeout
+        WAIT %WAIT
+    WHILE #TRUE
+    {
+        If #MenuButton = Closed
+           HALT
+        GOSUB checkEnnemy
+        If #RESULT = #TRUE
+        {
+            MENU Set tlog Ennemis trouve, attaque en cours
+            EVENT Macro 15 	115 ;Cast Wither
+            SET %gtimeout #SCNT + 3
+            WHILE #SCNT < %gtimeout
+                WAIT %WAIT
+            EVENT Macro 15 	115 ;Cast Wither
+            SET %gtimeout #SCNT + 3
+            WHILE #SCNT < %gtimeout
+                WAIT %WAIT
+            EVENT Macro 15 	115 ;Cast Wither
+            SET %gtimeout #SCNT + 3
+            WHILE #SCNT < %gtimeout
+                WAIT %WAIT
+        }
+        else
+            BREAK
+    }
+    return
+}
+
+;=============================================================================
+; DOLOOT
+; Lance le loot
+;=============================================================================
+sub doLoot
+{
+    SET %merkcorpse N/A
+    SET %DONE #False
+    WHILE #True
+    {
+        If #MenuButton = Closed
+           HALT
+        findItem %corpse G
+        if #findkind = -1
+           BREAK
+        if #findkind = 1
+        {
+            if  #findid <> %merkcorpse
+            {
+                event exmsg #findid 3 30 Loot me!
+                set %merkcorpse #findid
+                GOSUB looten
+            }
+        }
+    }
+    return
+}
+
+sub looten
+{
+;search corpse
+NAE1:
+   findItem %corpse G
+   if #findkind <> 1
+	    return
+   if #FINDREP = 110
+   {
+      ignoreitem #findid
+      goto NAE1
+   }
+   set %foundcorpse #findid
+   set %merkcorpse #findid
+   set %merkzeit #scnt + %pathzeit
+   set %merkzeit2 0
+PATHW1:
+   if #scnt > %merkzeit
+   {
+        MENU Set tlog Impossible d'aller jusqu'au corps
+        return
+   }
+   findItem %foundcorpse G
+   if #FINDDIST <= 2
+      goto NAE3
+   MENU Set tlog Va jusqu'au corps
+   if #scnt <= %merkzeit2
+      goto PATHW1
+   event pathfind #FINDX #FINDY #FINDZ 2 2s
+   set %merkzeit2 #scnt + 2
+   goto PATHW1
+NAE3:
+   ;---cut corpse
+   set #lobjectid %myweapon
+   set #ltargetkind 1
+   set #ltargetid %foundcorpse
+   event macro 17 0
+   target 2s
+   event macro 22 0
+   wait %mydelay
+   ;----open corpse
+   MENU Set tlog Open Corpse
+   gosub openLootContainerAt %foundcorpse 40 40
+   if %return = #false
+      return
+   wait %mydelay
+   set %corpsebag %_lootcontainer
+AX04:
+   ;---get the gold (or whatever else in %gold
+   MENU Set tlog Get Loot
+   findItem %gold C_ , %corpsebag
+   if #findkind <> 0
+   {
+     goto AX7
+   }
+   set %merk #findid
+   deleteJournal
+   gosub MoveItemToBackpack %merk 0
+   wait %mydelay
+   scanjournal 1
+   if OVERLOADED in #Journal || HOLD_MORE in #Journal
+   {
+      click 100 100 r
+      MENU Set tlog Sac plein
+      GOSUB unmount
+      WAIT %SMALLWAIT
+      GOSUB transfert %CUIR #BACKPACKID %SACBEETLE
+      GOSUB transfert %LAINE #BACKPACKID %SACBEETLE
+      GOSUB transfert %PLUME #BACKPACKID %SACBEETLE
+      GOSUB mount
+      WAIT %SMALLWAIT
+   }
+   goto AX04
+AX7:
+   ;---get the leather
+   findItem %leather_uncutted C_ , %corpsebag
+   if #findkind <> 0
+      goto AX8
+   set %merk #findid
+   deleteJournal
+   gosub MoveItemToBackpack %merk 0
+   wait %mydelay
+   scanjournal 1
+   if OVERLOADED in #Journal || HOLD_MORE in #Journal
+   {
+      click 100 100 r
+      MENU Set tlog Sac plein
+      GOSUB unmount
+      WAIT %SMALLWAIT
+      GOSUB transfert %CUIR #BACKPACKID %SACBEETLE
+      GOSUB transfert %LAINE #BACKPACKID %SACBEETLE
+      GOSUB transfert %PLUME #BACKPACKID %SACBEETLE
+      GOSUB mount
+      WAIT %SMALLWAIT
+   }
+   goto AX7
+   ;---cut the leather
+   ;---cut the leather debug start
+AX8:
+   gosub close_container
+   ;click 100 100 r
+   MENU Set tlog Cut Hides
+   finditem %scissors C_ , #backpackid
+   set #lobjectid #findid
+   findItem %leather_uncutted C_ , #backpackid
+   if #findkind = 0
+   {
+      set #lTargetKind 1
+      set #ltargetid #findid
+      event macro 17 0
+      target 2s
+      event macro 22 0
+      wait %mydelay
+   }
+   ignoreitem %foundcorpse
+   return
+}
+
+;################################
+;  Container closing
+; %1 = container id
+;################################
+sub close_container
+{
+CLOSEAGAIN:
+   if #conttype <> YFM
+      return
+   set %clx #contposx + 50
+   set %cly #contposy + 80
+   click %clx %cly r
+   goto CLOSEAGAIN
+}
+;################################
+;  Container opening (Lootcontainer)
+;################################
+; Name: OpenLootContainerAt
+; Purpose: Opens a Loot container at x y (needed after pub 28)
+; %1 = container id before open
+; %2 = X
+; %3 = Y
+;returns %_lootcontainer
+sub openLootContainerAt
+{
+	set %4b #sCnt2 + 20
+                set %_contid %1
+	set %_x %2
+	set %_y %3
+	set %_retry 0
+_openContainerAtRetry:
+                set %_oldcontainer #contid
+                set #nextCPosX %_x
+	set #nextCPosY %_y
+	findItem %_contid
+	set #lObjectID #findID
+	event Macro 17 0
+                gosub waitForLootContainerToOpen
+                if %return = #false
+                {
+	      if #scnt2 > %4b
+                      {
+                         set %return #false
+         	         return
+                      }
+                      goto _openContainerAtRetry:
+                }
+                set %_lootcontainer #contid
+                wait %backpackdelay
+	if #contPosX <> %_x && #contPosY <> %_y
+	{
+		set #contPosX %_x
+		set #contPosY %_y
+		wait %backpackdelay
+	}
+                set %return #true
+                return
+}
+
+sub waitForLootContainerToOpen
+{
+   set %4 #sCnt2 + 30
+   waitcheck31:
+     if #scnt2 > %4
+    {
+         set %return #false
+         return
+    }
+     if  #contid = %_oldcontainer
+          goto waitcheck31
+     if #contname <> container_gump || #contsize <> 144_212
+           goto waitcheck31
+      set %return #true
+      return
+}
+
+;#################################
+; gosub MoveItemToBackpack  %itemid %amount
+; Purpose: Moves an item to the backpack
+;#################################
+
+sub MoveItemToBackpack
+ {
+   set #FINDMOD 0_0
+   gosub drag %1 %2
+   gosub dropOnBackPack #backpackid
+   return
+}
+
+;##########################
+;# gosub drag %itemid %amount
+;# returns %return #false or #true
+;###########################
+sub drag
+{
+	set %_itemID %1
+	if %0 < 2 || ! ( %2 > 0 )
+	   set %_amount
+	else
+	   set %_amount %2
+	gosub waitForNoDragging
+                if %return = #false
+	     return
+	   msg $ ; clean keyboard buffer
+	   event Drag %_itemID
+     SET %NB 0
+_drag:
+                  gosub WaitForDragging
+                  if #contname = stack_gump
+                       msg %_amount $
+                  gosub waitForOnlyDragging
+                  SET %NB %NB + 1
+                  if %NB > 5
+                     goto _dragend
+                  if #contname = stack_gump
+                     goto _drag
+                ;wait %dragdelay   ;needed?
+_dragend:
+                return
+}
+
+
+;##########################
+;# gosub drop %screenx %screeny
+;# returns %return #false or #true
+;###########################
+sub drop
+{
+	set %return #false
+	if #contname != drag_gump
+                      return
+	click %1 %2 P
+	gosub waitForNoDragging
+	wait %dropdelay
+               return
+}
+
+sub dropOnBackPack
+{
+	set %_findMod #findMod
+	set #findMod 0_0
+	findItem #backpackid
+	set %_paperdollX #findX
+	set %_paperdollY #findY
+	set #findMod %_findMod
+	set %_backpackX %_paperdollX + 142
+	set %_backpackY %_paperdollY + 225
+	gosub drop %_backpackX %_backpackY %_retVal
+                return
+}
+
+
+sub WaitForDragging
+{
+    LinesPerCycle %uncriticallinesPerCycle
+   set %return #true
+   set %4 #sCnt2 + 100
+   waitcheck71:
+     if #scnt2 > %4
+    {
+         set %return #false
+         LinesPerCycle %mylinesPerCycle
+         return
+    }
+     if  #contname = drag_gump
+    {
+         LinesPerCycle %mylinesPerCycle
+         return
+    }
+     if  #contname = stack_gump
+     {
+         LinesPerCycle %mylinesPerCycle
+         return
+     }
+     goto waitcheck71
+}
+
+
+sub waitForOnlyDragging
+{
+   LinesPerCycle %uncriticallinesPerCycle
+   set %return #true
+   set %4 #sCnt2 + 30
+   waitcheck77:
+     if #scnt2 > %4
+    {
+         set %return #false
+         LinesPerCycle %mylinesPerCycle
+         return
+    }
+     if  #contname = drag_gump
+     {
+         LinesPerCycle %mylinesPerCycle
+         return
+     }
+     goto waitcheck77
+      return
+}
+
+
+sub waitForNoDragging
+{
+   LinesPerCycle %uncriticallinesPerCycle
+   set %4 #sCnt2 + 40
+   waitcheck42:
+     if #scnt2 > %4
+    {
+         set %return #false
+         LinesPerCycle %mylinesPerCycle
+         return
+    }
+     if  #contname = drag_gump
+          goto waitcheck42
+     if  #contname = stack_gump
+          goto waitcheck42
+    set %return #true
+    LinesPerCycle %mylinesPerCycle
+    return
+}
+
+;=============================================================================
+; UNMOUNT
+; Descend de la beetle
+;=============================================================================
+sub unmount
+  GOSUB unsetWarMode
+	SET #lobjectid #CHARID
+	EVENT macro 17 0
+	WAIT 1s
+return
+
+;=============================================================================
+; MOUNT
+; Monte sur la beetle
+;=============================================================================
+sub mount
+	MSG %allcome
+	WAIT 2s
+	SET #lobjectid %pet
+	EVENT macro 17 0
+	WAIT 1s
+return
+
+;=============================================================================
+; LOOTRESSOURCES
+; Recupere les ressources cuire / plumes / laine
+;=============================================================================
+sub lootRessources
+{
+    IGNOREITEM reset
+    GOSUB unmount
+    MENU Set tlog Selectionnez le coffre a cuire
+    SET #TARGCURS 1
+    WHILE #TARGCURS = 1
+    	WAIT 1
+    SET %SECURE #LTARGETID
+    WAIT %SMALLWAIT
+    ;FINDITEM %SECURE
+    ;DISPLAY #FINDTYPE
+    MENU Set tlog Selectionnez le runebook
+    SET #TARGCURS 1
+    WHILE #TARGCURS = 1
+    	WAIT 1
+    SET %RUNEBOOK #LTARGETID
+    WAIT %SMALLWAIT
+    MENU Set tlog Selectionnez la beetle
+    SET #TARGCURS 1
+    WHILE #TARGCURS = 1
+    	WAIT 1
+    SET %pet #LTARGETID
+    WAIT %SMALLWAIT
+    MENU Set tlog Ouvrir le sac de la beetle (6s)
+		WAIT 6s
+		SET %SACBEETLE #CONTID
+    WAIT %SMALLWAIT
+    GOSUB mount
+    WAIT %SMALLWAIT
+    SET %spot 1
+    WHILE #True
+    {
+        MENU Set tlog Va au spot %spot
+        GOSUB recall %spot
+        If %spot = 1
+        {
+            GOSUB unmount
+            WAIT %SMALLWAIT
+            GOSUB transfert %CUIR %SACBEETLE %SECURE
+            GOSUB transfert %LAINE %SACBEETLE %SECURE
+            GOSUB transfert %PLUME %SACBEETLE %SECURE
+            GOSUB mount
+            WAIT %SMALLWAIT
+        }
+        Else
+        {
+            MENU Set tlog Activation du War Mode
+            GOSUB setWarMode
+            MENU Set tlog Aggro tous les animaux
+            GOSUB aggroAll %COW
+            GOSUB aggroAll %BULL
+            GOSUB aggroAll %BULL2
+            GOSUB aggroAll %COW2
+            GOSUB aggroAll %MOUTON
+            GOSUB aggroAll %CHEVAL
+            GOSUB aggroAll %CHEVAL2
+            GOSUB aggroAll %CHEVAL3
+            GOSUB aggroAll %POULE
+            MENU Set tlog Tue les animaux
+            GOSUB killAll
+            MENU Set tlog Ramassage des ressources
+            GOSUB doLoot
+            GOSUB killAll
+            MENU Set tlog Ramassage des ressources
+            GOSUB doLoot
+        }
+        If %spot = 10
+           SET %spot 1
+        Else
+           SET %spot %spot + 1
+        GOSUB unmount
+        WAIT %SMALLWAIT
+        GOSUB transfert %CUIR #BACKPACKID %SACBEETLE
+        GOSUB transfert %LAINE #BACKPACKID %SACBEETLE
+        GOSUB transfert %PLUME #BACKPACKID %SACBEETLE
+        GOSUB mount
+        WAIT %SMALLWAIT
+    }
+    return
+}
+
 ;=============================================================================
 ; INIT
 ; Initialise les variabls globales en fonction du menu
@@ -797,6 +1512,12 @@ sub init
     SET %FILLBOD #menures
     MENU Get except
     SET %EXCEPT #menures
+    MENU Get getcuir
+    SET %GETCUIR #menures
+    MENU Get getlaine
+    SET %GETLAINE #menures
+    MENU Get getplume
+    SET %GETPLUME #menures
     If %CURRENT_MODE = 1
     {
        SET %CURRENT_TOOL %BS_TOOLS
@@ -815,6 +1536,11 @@ sub init
        SET %CURRENT_MATERIALS %TL_LEATHER
        SET %PREFIX C_
     }
+    finditem %weapons C_ , #BACKPACKID
+    if #findkind <> -1
+    {
+       set %myweapon #findid
+    }
 return
 
 ;=============================================================================
@@ -822,6 +1548,7 @@ return
 ;=============================================================================
 Set #MenuButton N/A
 MenuLoop:
+   MENU Set tlog #SPC
    If #MenuButton <> N/A
    {
       If #MenuButton = button_new
@@ -842,6 +1569,12 @@ MenuLoop:
          Set #MenuButton N/A
          GOSUB init
          GOSUB rewardBOD
+      }
+      If #MenuButton = button_loot
+      {
+         Set #MenuButton N/A
+         GOSUB init
+         GOSUB lootRessources
       }
       If #MenuButton = Closed
       {
