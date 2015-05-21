@@ -691,7 +691,8 @@ start:
 				SET %nb_failed 0
 			if %nb_failed > %emptyspotretries
 			{
-			   EVENT sysMessage [INFO] Spot %spot vide
+         SET %curspot %spot - 1
+			   EVENT sysMessage [INFO] Spot %curspot vide
 			   SET %nb_failed 0
 			   goto next
 			}

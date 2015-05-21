@@ -15,15 +15,7 @@ SET %BODTYPES EYM
 SET %PELLE TWF
 SET %PIOCHE QPF
 SET %TISSU BUI
-SET %COW NG
-SET %COW2 IG
-SET %BULL YG
-SET %BULL2 XG
-SET %MOUTON PF
-SET %CHEVAL MG
-SET %CHEVAL2 OF
-SET %CHEVAL3 SG
-SET %POULE AG
+SET %TARGETS AG_SG_OF_MG_PF_XG_YG_IG_NG_SF
 SET %FINDBOD_RETRIES 4
 SET %FILLBOD_RETRIES 2
 SET %FILLEDBOD 0
@@ -31,10 +23,11 @@ SET %FAILEDBOD 0
 SET %CUIR JJG
 SET %LAINE OFF
 SET %PLUME VLK
+SET %RIBS VRD
 SET %recallretries 3
 set %corpse YFM
 set %leather_uncutted  EEG_GED_DEG
-set %gold POF_OFF_VLK
+set %gold POF
 set %leather_cutted JJG
 set %scissors KAG_JAG
 set %weapons CNF_BNF_TSF_WSF_GMH_HNF_TRD_URD_VRH
@@ -43,6 +36,8 @@ set %pathzeit 6
 set %backpackdelay 0
 set %mydelay 16
 set %mylinesPerCycle 20
+SET %maxweight 1400
+SET %MAXW #MAXWEIGHT - 20
 
 InitEvents
 
@@ -94,6 +89,7 @@ MENU Button button_loot 170 15 150 25 Ressources
 MENU Check getcuir 170 50 150 20 #true Cuir
 MENU Check getlaine 170 70 150 20 #true Laine
 MENU Check getplume 170 90 150 20 #true Plumes
+MENU Check getribs 170 110 150 20 #False Ribs
 menu Font Color $00009C
 menu Font Style b
 MENU Text tlog 10 225 #SPC
@@ -906,6 +902,67 @@ sub rewardBOD
   MENU Set button_reward Rendre les BOD
 return
 
+;=============================================================================
+; CHECK_BEETLE_FULL
+; Vérifie si la beetle est pleine
+; return : Vrai si pleine Faux sinon
+;=============================================================================
+sub check_beetle_full
+	EVENT property %pet
+	STR pos #property , , ,
+	SET %start #strres + 26
+	STR pos #property sto
+	SET %end #strres - %start - 1
+	STR mid #property %start %end
+	SET %weight #strres
+	if %weight > %maxweight
+		SET %res #TRUE
+    else
+		SET %res #FALSE
+return %res
+
+;=============================================================================
+; transfertRessources
+; Monte sur la beetle
+;=============================================================================
+sub transfertRessources
+    SET %FROM %1
+    SET %DEST %2
+    If %DEST = %SACBEETLE
+    {
+       GOSUB check_beetle_full
+       if #result = #TRUE
+          GOTO lootStart
+    }
+    GOSUB transfert %CUIR %FROM %DEST
+    If %DEST = %SACBEETLE
+    {
+       GOSUB check_beetle_full
+       if #result = #TRUE
+          GOTO lootStart
+    }
+    GOSUB transfert %LAINE %FROM %DEST
+    If %DEST = %SACBEETLE
+    {
+       GOSUB check_beetle_full
+       if #result = #TRUE
+          GOTO lootStart
+    }
+    GOSUB transfert %PLUME %FROM %DEST
+    If %DEST = %SACBEETLE
+    {
+       GOSUB check_beetle_full
+       if #result = #TRUE
+          GOTO lootStart
+    }
+    GOSUB transfert %RIBS %FROM %DEST
+    If %DEST = %SACBEETLE
+    {
+       GOSUB check_beetle_full
+       if #result = #TRUE
+          GOTO lootStart
+    }
+return
 
 ;=============================================================================
 ; AGGROALL
@@ -965,14 +1022,8 @@ SUB checkEnnemy
 {
     SET %CURHITS #HITS
     MENU Set tlog Check ennemis
-    SET %gtimeout #SCNT + 6
-    WHILE #SCNT < %gtimeout
-    {
-        If #MenuButton = Closed
-           HALT
-        WAIT %WAIT
-    }
-    If #HITS <> %CURHITS
+    FINDITEM %TARGETS G_4
+    If #FINDCNT > 0
        return #True
     return #False
 }
@@ -983,18 +1034,6 @@ SUB checkEnnemy
 ;=============================================================================
 SUB killAll
 {
-    EVENT Macro 15 	115 ;Cast Wither
-    SET %gtimeout #SCNT + 3
-    WHILE #SCNT < %gtimeout
-        WAIT %WAIT
-    EVENT Macro 15 	115 ;Cast Wither
-    SET %gtimeout #SCNT + 3
-    WHILE #SCNT < %gtimeout
-        WAIT %WAIT
-    EVENT Macro 15 	115 ;Cast Wither
-    SET %gtimeout #SCNT + 3
-    WHILE #SCNT < %gtimeout
-        WAIT %WAIT
     WHILE #TRUE
     {
         If #MenuButton = Closed
@@ -1003,15 +1042,7 @@ SUB killAll
         If #RESULT = #TRUE
         {
             MENU Set tlog Ennemis trouve, attaque en cours
-            EVENT Macro 15 	115 ;Cast Wither
-            SET %gtimeout #SCNT + 3
-            WHILE #SCNT < %gtimeout
-                WAIT %WAIT
-            EVENT Macro 15 	115 ;Cast Wither
-            SET %gtimeout #SCNT + 3
-            WHILE #SCNT < %gtimeout
-                WAIT %WAIT
-            EVENT Macro 15 	115 ;Cast Wither
+            EVENT Macro 15 	115
             SET %gtimeout #SCNT + 3
             WHILE #SCNT < %gtimeout
                 WAIT %WAIT
@@ -1110,15 +1141,13 @@ AX04:
    gosub MoveItemToBackpack %merk 0
    wait %mydelay
    scanjournal 1
-   if OVERLOADED in #Journal || HOLD_MORE in #Journal
+   if #WEIGHT > %MAXW
    {
       click 100 100 r
       MENU Set tlog Sac plein
       GOSUB unmount
       WAIT %SMALLWAIT
-      GOSUB transfert %CUIR #BACKPACKID %SACBEETLE
-      GOSUB transfert %LAINE #BACKPACKID %SACBEETLE
-      GOSUB transfert %PLUME #BACKPACKID %SACBEETLE
+      GOSUB transfertRessources #BACKPACKID %SACBEETLE
       GOSUB mount
       WAIT %SMALLWAIT
    }
@@ -1133,15 +1162,13 @@ AX7:
    gosub MoveItemToBackpack %merk 0
    wait %mydelay
    scanjournal 1
-   if OVERLOADED in #Journal || HOLD_MORE in #Journal
+   if #WEIGHT > %MAXW
    {
       click 100 100 r
       MENU Set tlog Sac plein
       GOSUB unmount
       WAIT %SMALLWAIT
-      GOSUB transfert %CUIR #BACKPACKID %SACBEETLE
-      GOSUB transfert %LAINE #BACKPACKID %SACBEETLE
-      GOSUB transfert %PLUME #BACKPACKID %SACBEETLE
+      GOSUB transfertRessources #BACKPACKID %SACBEETLE
       GOSUB mount
       WAIT %SMALLWAIT
    }
@@ -1425,8 +1452,6 @@ sub lootRessources
     	WAIT 1
     SET %SECURE #LTARGETID
     WAIT %SMALLWAIT
-    ;FINDITEM %SECURE
-    ;DISPLAY #FINDTYPE
     MENU Set tlog Selectionnez le runebook
     SET #TARGCURS 1
     WHILE #TARGCURS = 1
@@ -1445,6 +1470,7 @@ sub lootRessources
     WAIT %SMALLWAIT
     GOSUB mount
     WAIT %SMALLWAIT
+lootStart:
     SET %spot 1
     WHILE #True
     {
@@ -1454,9 +1480,7 @@ sub lootRessources
         {
             GOSUB unmount
             WAIT %SMALLWAIT
-            GOSUB transfert %CUIR %SACBEETLE %SECURE
-            GOSUB transfert %LAINE %SACBEETLE %SECURE
-            GOSUB transfert %PLUME %SACBEETLE %SECURE
+            GOSUB transfertRessources %SACBEETLE %SECURE
             GOSUB mount
             WAIT %SMALLWAIT
         }
@@ -1465,32 +1489,22 @@ sub lootRessources
             MENU Set tlog Activation du War Mode
             GOSUB setWarMode
             MENU Set tlog Aggro tous les animaux
-            GOSUB aggroAll %COW
-            GOSUB aggroAll %BULL
-            GOSUB aggroAll %BULL2
-            GOSUB aggroAll %COW2
-            GOSUB aggroAll %MOUTON
-            GOSUB aggroAll %CHEVAL
-            GOSUB aggroAll %CHEVAL2
-            GOSUB aggroAll %CHEVAL3
-            GOSUB aggroAll %POULE
+            GOSUB aggroAll %TARGETS
+            SET %gtimeout #SCNT + 3
+            WHILE #SCNT < %gtimeout
+               WAIT %WAIT
             MENU Set tlog Tue les animaux
             GOSUB killAll
             MENU Set tlog Ramassage des ressources
             GOSUB doLoot
-            GOSUB killAll
-            MENU Set tlog Ramassage des ressources
-            GOSUB doLoot
         }
-        If %spot = 10
+        If %spot = 11
            SET %spot 1
         Else
            SET %spot %spot + 1
         GOSUB unmount
         WAIT %SMALLWAIT
-        GOSUB transfert %CUIR #BACKPACKID %SACBEETLE
-        GOSUB transfert %LAINE #BACKPACKID %SACBEETLE
-        GOSUB transfert %PLUME #BACKPACKID %SACBEETLE
+        GOSUB transfertRessources #BACKPACKID %SACBEETLE
         GOSUB mount
         WAIT %SMALLWAIT
     }
@@ -1514,10 +1528,20 @@ sub init
     SET %EXCEPT #menures
     MENU Get getcuir
     SET %GETCUIR #menures
+    If %GETCUIR = -1
+       set %gold %gold , _ , %CUIR
     MENU Get getlaine
     SET %GETLAINE #menures
+    If %GETLAINE = -1
+       set %gold %gold , _ , %LAINE
     MENU Get getplume
     SET %GETPLUME #menures
+    If %GETPLUME = -1
+       set %gold %gold , _ , %PLUME
+    MENU Get getribs
+    SET %GETRIBS #menures
+    If %GETRIBS = -1
+       set %gold %gold , _ , %RIBS
     If %CURRENT_MODE = 1
     {
        SET %CURRENT_TOOL %BS_TOOLS
